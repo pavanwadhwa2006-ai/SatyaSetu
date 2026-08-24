@@ -16,7 +16,11 @@ export const metadata: Metadata = {
     "AI-Powered Integrated Bid Compliance Verification Platform for Government Procurement. Prototype for Smart India Hackathon 2026.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
