@@ -5,14 +5,12 @@ import Link from "next/link";
 import { getBidderById } from "@/data/bidders";
 import { getComplianceByBidder } from "@/data/compliance";
 import { getRiskByBidder, getRecommendationByBidder } from "@/data/risk-and-recommendations";
-import { getAuditByBidder } from "@/data/audit";
 import { useEvaluation } from "@/contexts/evaluation-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/compliance/status-badge";
-import { Separator } from "@/components/ui/separator";
 import { DecisionType } from "@/types";
 import {
   Gavel, CheckCircle2, XCircle, MessageSquare, AlertTriangle, ArrowRight,
@@ -53,52 +51,56 @@ export default function FinalDecisionPage({ params }: { params: Promise<{ id: st
   const decisions: { type: DecisionType; label: string; icon: React.ElementType; color: string; bg: string }[] = [
     { type: "APPROVE", label: "Approve / Qualify", icon: CheckCircle2, color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100" },
     { type: "REJECT", label: "Reject / Disqualify", icon: XCircle, color: "text-red-700", bg: "bg-red-50 border-red-200 hover:bg-red-100" },
-    { type: "CLARIFICATION", label: "Send for Clarification", icon: MessageSquare, color: "text-amber-700", bg: "bg-amber-50 border-amber-200 hover:bg-amber-100" },
+    { type: "CLARIFICATION", label: "Send Clarification", icon: MessageSquare, color: "text-amber-700", bg: "bg-amber-50 border-amber-200 hover:bg-amber-100" },
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
         <Link href="/officer" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
         <span className="text-muted-foreground">/</span>
         <Link href={`/officer/tenders/${id}/bidders/${bidderId}`} className="text-muted-foreground hover:text-foreground">{bidder.shortName}</Link>
         <span className="text-muted-foreground">/</span>
-        <span className="font-medium">Final Decision</span>
+        <span className="font-medium text-foreground">Final Decision</span>
       </div>
 
       <div>
-        <h1 className="text-xl font-semibold flex items-center gap-2">
+        <h1 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
           <Gavel className="h-5 w-5 text-[#1e3a5f]" />
           Final Officer Decision
         </h1>
-        <p className="text-sm text-muted-foreground">{bidder.legalName}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{bidder.legalName}</p>
       </div>
 
       {/* Pre-Decision Summary */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4 text-center">
+          <CardContent className="p-3.5 sm:p-4 text-center">
             <p className="text-xs text-muted-foreground">Compliance</p>
-            <p className="text-2xl font-bold">{compliance.complianceScore}%</p>
+            <p className="text-xl sm:text-2xl font-bold">{compliance.complianceScore}%</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
+          <CardContent className="p-3.5 sm:p-4 text-center">
             <p className="text-xs text-muted-foreground">Risk</p>
-            <StatusBadge status={risk.riskLevel} size="md" showIcon={false} />
+            <div className="mt-1 flex justify-center">
+              <StatusBadge status={risk.riskLevel} size="md" showIcon={false} />
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
+          <CardContent className="p-3.5 sm:p-4 text-center">
             <p className="text-xs text-muted-foreground">Mandatory Failures</p>
-            <p className="text-2xl font-bold text-red-600">{compliance.failedRequirements}</p>
+            <p className="text-xl sm:text-2xl font-bold text-red-600">{compliance.failedRequirements}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
+          <CardContent className="p-3.5 sm:p-4 text-center">
             <p className="text-xs text-muted-foreground">AI Recommendation</p>
-            <StatusBadge status={rec.recommendation} size="sm" />
+            <div className="mt-1 flex justify-center">
+              <StatusBadge status={rec.recommendation} size="sm" />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -106,12 +108,12 @@ export default function FinalDecisionPage({ params }: { params: Promise<{ id: st
       {/* Review Flags */}
       {compliance.reviewRequirements > 0 && (
         <Card className="bg-amber-50/50 border-amber-200">
-          <CardContent className="p-4">
+          <CardContent className="p-3.5 sm:p-4">
             <p className="text-xs font-semibold text-amber-800 mb-2 flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5" /> Review Flags
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Review Flags
             </p>
             {compliance.items.filter(i => i.status === "REVIEW").map(item => (
-              <p key={item.requirementId} className="text-sm text-amber-700">
+              <p key={item.requirementId} className="text-xs sm:text-sm text-amber-700 leading-relaxed">
                 • {item.requirementName}: {item.reason}
               </p>
             ))}
@@ -119,28 +121,28 @@ export default function FinalDecisionPage({ params }: { params: Promise<{ id: st
         </Card>
       )}
 
-      {/* Decision */}
+      {/* Decision Card */}
       {!confirmed ? (
         <Card>
-          <CardContent className="p-6 space-y-4">
+          <CardContent className="p-4 sm:p-6 space-y-4">
             <p className="text-sm font-semibold">Select Your Decision</p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {decisions.map(({ type, label, icon: Icon, color, bg }) => (
                 <button
                   key={type}
                   onClick={() => setSelectedDecision(type)}
-                  className={`rounded-lg border-2 p-4 text-left transition-all ${
-                    selectedDecision === type ? `${bg} border-current` : "border-transparent hover:border-muted"
+                  className={`rounded-lg border-2 p-3.5 sm:p-4 text-left transition-all ${
+                    selectedDecision === type ? `${bg} border-current ring-2 ring-offset-1` : "border-muted/60 hover:border-muted bg-card"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 mb-2 ${color}`} />
-                  <p className={`text-sm font-semibold ${color}`}>{label}</p>
+                  <Icon className={`h-5 w-5 mb-1.5 ${color}`} />
+                  <p className={`text-xs sm:text-sm font-semibold ${color}`}>{label}</p>
                 </button>
               ))}
             </div>
 
             <div>
-              <Label>Officer Remarks</Label>
+              <Label className="text-xs sm:text-sm">Officer Remarks</Label>
               <Textarea
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
@@ -153,7 +155,7 @@ export default function FinalDecisionPage({ params }: { params: Promise<{ id: st
             <Button
               onClick={handleConfirm}
               disabled={!selectedDecision}
-              className="bg-[#1e3a5f] hover:bg-[#152a45] w-full gap-2"
+              className="bg-[#1e3a5f] hover:bg-[#152a45] w-full gap-2 text-xs sm:text-sm"
             >
               <Gavel className="h-4 w-4" /> Confirm Final Decision
             </Button>
@@ -161,26 +163,28 @@ export default function FinalDecisionPage({ params }: { params: Promise<{ id: st
         </Card>
       ) : (
         <Card className="border-2 border-emerald-200 bg-emerald-50/30">
-          <CardContent className="p-6 text-center space-y-3">
-            <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-600" />
-            <h2 className="text-lg font-bold">Decision Recorded</h2>
-            <StatusBadge status={selectedDecision ?? "APPROVE"} size="lg" />
+          <CardContent className="p-5 sm:p-8 text-center space-y-3">
+            <CheckCircle2 className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-emerald-600" />
+            <h2 className="text-base sm:text-lg font-bold">Decision Recorded</h2>
+            <div className="flex justify-center">
+              <StatusBadge status={selectedDecision ?? "APPROVE"} size="lg" />
+            </div>
             {remarks && (
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto italic px-2">
                 &ldquo;{remarks}&rdquo;
               </p>
             )}
             <p className="text-xs text-muted-foreground">
               Decision by: Ananya Mehta, Senior Procurement Officer
             </p>
-            <div className="flex justify-center gap-3 pt-2">
-              <Link href={`/officer/tenders/${id}/bidders/${bidderId}/audit`}>
-                <Button variant="outline" size="sm" className="gap-1">
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3 pt-2">
+              <Link href={`/officer/tenders/${id}/bidders/${bidderId}/audit`} className="w-full sm:w-auto">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto gap-1 text-xs">
                   View Audit Trail <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>
-              <Link href={`/officer/tenders/${id}/report`}>
-                <Button variant="outline" size="sm" className="gap-1">
+              <Link href={`/officer/tenders/${id}/report`} className="w-full sm:w-auto">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto gap-1 text-xs">
                   Evaluation Report <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>

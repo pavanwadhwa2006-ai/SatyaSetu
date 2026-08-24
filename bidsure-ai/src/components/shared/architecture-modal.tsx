@@ -57,9 +57,9 @@ const layerLabels: Record<string, { label: string; color: string }> = {
 export function ArchitectureModal({ open, onOpenChange }: ArchitectureModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-[#1e3a5f]">
+      <DialogContent className="w-[95vw] sm:max-w-lg max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="text-left">
+          <DialogTitle className="text-base sm:text-lg font-semibold text-[#1e3a5f]">
             System Architecture
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
@@ -68,7 +68,7 @@ export function ArchitectureModal({ open, onOpenChange }: ArchitectureModalProps
         </DialogHeader>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="flex flex-wrap gap-1.5 my-2">
           {Object.entries(layerLabels)
             .filter(([key]) => ["ai", "rule", "verification", "human"].includes(key))
             .map(([key, val]) => (
@@ -79,25 +79,25 @@ export function ArchitectureModal({ open, onOpenChange }: ArchitectureModalProps
         </div>
 
         {/* Pipeline */}
-        <div className="space-y-0">
+        <div className="space-y-0 py-1">
           {steps.map((step, i) => (
             <div key={i}>
-              <div className={`flex items-center gap-3 rounded-lg px-3 py-2.5 border ${step.bg} border-transparent`}>
-                <div className={`flex h-8 w-8 items-center justify-center rounded-md ${step.bg} border`}>
-                  <step.icon className={`h-4 w-4 ${step.color}`} />
+              <div className={`flex items-center gap-2.5 sm:gap-3 rounded-lg px-2.5 sm:px-3 py-2 border ${step.bg} border-transparent`}>
+                <div className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-md ${step.bg} border`}>
+                  <step.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${step.color}`} />
                 </div>
-                <span className={`text-sm font-medium ${step.color}`}>
+                <span className={`text-xs sm:text-sm font-medium ${step.color} truncate flex-1`}>
                   {step.label}
                 </span>
                 {step.layer === "verification" && (
-                  <Badge variant="outline" className="ml-auto text-[9px] bg-amber-50 text-amber-700 border-amber-200">
+                  <Badge variant="outline" className="text-[9px] bg-amber-50 text-amber-700 border-amber-200 shrink-0">
                     Mock
                   </Badge>
                 )}
               </div>
               {i < steps.length - 1 && (
                 <div className="flex justify-center py-0.5">
-                  <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/40" />
+                  <ArrowDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground/40" />
                 </div>
               )}
             </div>
@@ -105,7 +105,7 @@ export function ArchitectureModal({ open, onOpenChange }: ArchitectureModalProps
         </div>
 
         <div className="mt-3 rounded-md bg-muted/50 p-3 border">
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
             <strong>Note:</strong> This architecture diagram represents the intended
             system design. Government verification sources shown are prototype/mock
             implementations. AI components use pre-computed analysis for this

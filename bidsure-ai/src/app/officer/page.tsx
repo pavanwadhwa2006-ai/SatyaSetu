@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/compliance/status-badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -28,23 +27,23 @@ const tenderRows = [
 
 export default function OfficerDashboard() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-xl font-semibold text-[#1e3a5f]">Procurement Evaluation Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Monitor tenders, evaluate bids, and manage procurement decisions</p>
+        <h1 className="text-lg sm:text-xl font-semibold text-[#1e3a5f]">Procurement Evaluation Dashboard</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Monitor tenders, evaluate bids, and manage procurement decisions</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {stats.map((stat) => (
           <Card key={stat.label}>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.bg}`}>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+            <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
+              <div className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
+                <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold leading-tight">{stat.value}</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{stat.label}</p>
               </div>
             </CardContent>
           </Card>
@@ -53,55 +52,57 @@ export default function OfficerDashboard() {
 
       {/* Tender Table */}
       <Card>
-        <div className="p-4 border-b flex items-center justify-between">
-          <h2 className="font-semibold text-sm">Tender Evaluations</h2>
-          <Badge variant="outline" className="text-xs">Prototype Tender Data</Badge>
+        <div className="p-3.5 sm:p-4 border-b flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold text-sm sm:text-base">Tender Evaluations</h2>
+          <Badge variant="outline" className="text-[10px] sm:text-xs">Prototype Tender Data</Badge>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tender</TableHead>
-              <TableHead className="w-[80px]">Bids</TableHead>
-              <TableHead className="w-[140px]">Evaluation Status</TableHead>
-              <TableHead className="w-[110px]">Deadline</TableHead>
-              <TableHead className="w-[140px]">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tenderRows.map((row) => (
-              <TableRow key={row.id} className={row.isShowcase ? "bg-blue-50/50" : ""}>
-                <TableCell>
-                  <div>
-                    <span className="text-xs font-mono text-muted-foreground">{row.id}</span>
-                    <p className="text-sm font-medium">{row.title}</p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-semibold">{row.bids}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                    {row.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.deadline}</TableCell>
-                <TableCell>
-                  {row.isShowcase ? (
-                    <Link href={`/officer/tenders/${row.id}`}>
-                      <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1">
-                        Analyze Bids <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Button size="sm" variant="outline" disabled className="gap-1">
-                      View <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[220px]">Tender</TableHead>
+                <TableHead className="w-[70px] sm:w-[80px]">Bids</TableHead>
+                <TableHead className="w-[120px] sm:w-[140px]">Evaluation Status</TableHead>
+                <TableHead className="w-[100px] sm:w-[110px]">Deadline</TableHead>
+                <TableHead className="w-[120px] sm:w-[140px]">Action</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {tenderRows.map((row) => (
+                <TableRow key={row.id} className={row.isShowcase ? "bg-blue-50/50" : ""}>
+                  <TableCell>
+                    <div className="min-w-0">
+                      <span className="text-xs font-mono text-muted-foreground font-medium">{row.id}</span>
+                      <p className="text-xs sm:text-sm font-medium leading-snug">{row.title}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-semibold text-xs">{row.bids}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
+                      {row.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{row.deadline}</TableCell>
+                  <TableCell>
+                    {row.isShowcase ? (
+                      <Link href={`/officer/tenders/${row.id}`}>
+                        <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1 text-xs whitespace-nowrap">
+                          Analyze Bids <ArrowRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled className="gap-1 text-xs whitespace-nowrap">
+                        View <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
     </div>
   );

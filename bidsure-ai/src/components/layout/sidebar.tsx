@@ -11,7 +11,6 @@ import {
   ClipboardCheck,
   BarChart3,
   ScrollText,
-  Settings,
   Info,
 } from "lucide-react";
 import { useState } from "react";
@@ -44,7 +43,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-56 shrink-0 border-r bg-white flex flex-col">
+      <aside className="hidden md:flex sticky top-14 h-[calc(100vh-3.5rem)] w-56 shrink-0 border-r bg-white flex-col">
         <nav className="flex-1 space-y-1 px-3 py-4">
           {navItems.map((item) => {
             const isActive =

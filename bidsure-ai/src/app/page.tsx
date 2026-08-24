@@ -23,61 +23,61 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4 sm:p-6">
       {/* Branding */}
-      <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1e3a5f] shadow-lg">
-          <Shield className="h-8 w-8 text-white" />
+      <div className="mb-6 sm:mb-8 text-center max-w-sm sm:max-w-md">
+        <div className="mx-auto mb-3 sm:mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-[#1e3a5f] shadow-lg">
+          <Shield className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-[#1e3a5f]">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1e3a5f]">
           BidSure AI
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-muted-foreground px-2">
           AI-Powered Bid Compliance Verification Platform
         </p>
       </div>
 
       {/* Login Options */}
       <div className="w-full max-w-md space-y-3">
-        <p className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">
+        <p className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3 sm:mb-4">
           Select your role to continue
         </p>
 
         <Card
-          className="cursor-pointer border-2 border-transparent transition-all hover:border-[#1e3a5f]/30 hover:shadow-md"
+          className="cursor-pointer border-2 border-transparent transition-all hover:border-[#1e3a5f]/30 hover:shadow-md active:scale-[0.99]"
           onClick={() => handleLogin("officer")}
         >
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#1e3a5f]/10">
-              <LayoutDashboard className="h-6 w-6 text-[#1e3a5f]" />
+          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-[#1e3a5f]/10">
+              <LayoutDashboard className="h-5 w-5 sm:h-6 sm:w-6 text-[#1e3a5f]" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-[#1e3a5f]">Procurement Officer</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base text-[#1e3a5f]">Procurement Officer</h3>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                 Evaluate bids, review compliance, and make procurement decisions
               </p>
             </div>
-            <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45]">
+            <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] shrink-0 text-xs sm:text-sm">
               Enter
             </Button>
           </CardContent>
         </Card>
 
         <Card
-          className="cursor-pointer border-2 border-transparent transition-all hover:border-emerald-300 hover:shadow-md"
+          className="cursor-pointer border-2 border-transparent transition-all hover:border-emerald-300 hover:shadow-md active:scale-[0.99]"
           onClick={() => handleLogin("bidder")}
         >
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
-              <Building2 className="h-6 w-6 text-emerald-700" />
+          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-700" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-emerald-800">Bidder</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base text-emerald-800">Bidder</h3>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                 Browse tenders, submit bids, and upload compliance documents
               </p>
             </div>
-            <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 shrink-0 text-xs sm:text-sm">
               Enter
             </Button>
           </CardContent>
@@ -85,8 +85,8 @@ export default function LoginPage() {
       </div>
 
       {/* Disclaimer */}
-      <div className="mt-8 max-w-md text-center">
-        <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+      <div className="mt-6 sm:mt-8 max-w-md text-center px-4">
+        <p className="text-[10px] sm:text-[11px] text-muted-foreground/60 leading-relaxed">
           Prototype for Smart India Hackathon 2026 · Problem Statement SIH26100
           <br />
           All data shown is synthetic and for demonstration purposes only.
