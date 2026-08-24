@@ -2,7 +2,6 @@
 
 import { AppHeader } from "@/components/layout/app-header";
 import { Sidebar } from "@/components/layout/sidebar";
-import { EvaluationProvider } from "@/contexts/evaluation-context";
 
 export default function BidderLayout({ children }: { children: React.ReactNode }) {
   return (

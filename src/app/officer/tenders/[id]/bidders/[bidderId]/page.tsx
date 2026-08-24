@@ -5,7 +5,6 @@ import Link from "next/link";
 import { getBidderById } from "@/data/bidders";
 import { getComplianceByBidder } from "@/data/compliance";
 import { getRiskByBidder } from "@/data/risk-and-recommendations";
-import { getBidByBidderAndTender } from "@/data/bids";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/compliance/status-badge";
@@ -22,7 +21,6 @@ export default function BidderCompliancePage({ params }: { params: Promise<{ id:
   const bidder = getBidderById(bidderId);
   const compliance = getComplianceByBidder(bidderId);
   const risk = getRiskByBidder(bidderId);
-  const bid = getBidByBidderAndTender(bidderId, id);
 
   if (!bidder || !compliance) return <div className="p-6">Bidder not found.</div>;
 

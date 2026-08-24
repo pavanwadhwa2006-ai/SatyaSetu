@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { OfficerDecision, DecisionType } from "@/types";
+import { OfficerDecision } from "@/types";
 
 interface EvaluationContextType {
   decisions: Record<string, OfficerDecision>;
