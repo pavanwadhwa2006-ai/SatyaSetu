@@ -3,9 +3,10 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Shield, Building2, LayoutDashboard } from "lucide-react";
+import { Building2, LayoutDashboard } from "lucide-react";
 
 export default function LoginPage() {
   const { isAuthenticated, role, login } = useAuth();
@@ -26,11 +27,18 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4 sm:p-6">
       {/* Branding */}
       <div className="mb-6 sm:mb-8 text-center max-w-sm sm:max-w-md">
-        <div className="mx-auto mb-3 sm:mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-[#1e3a5f] shadow-lg">
-          <Shield className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+        <div className="relative mx-auto mb-3 sm:mb-4 h-16 w-16 sm:h-20 sm:w-20">
+          <Image
+            src="/satyaseetu-logo.png"
+            alt="Satyaseetu Logo"
+            fill
+            sizes="80px"
+            priority
+            className="object-contain"
+          />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1e3a5f]">
-          BidSure AI
+          SatyaSetu
         </h1>
         <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-muted-foreground px-2">
           AI-Powered Bid Compliance Verification Platform

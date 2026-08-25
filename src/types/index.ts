@@ -1,5 +1,5 @@
 // ============================================================
-// BidSure AI — Core Type Definitions
+// SatyaSetu — Core Type Definitions
 // AI-Powered Bid Compliance Verification Platform
 // ============================================================
 

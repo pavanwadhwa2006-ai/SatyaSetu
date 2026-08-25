@@ -63,7 +63,7 @@ export function ArchitectureModal({ open, onOpenChange }: ArchitectureModalProps
             System Architecture
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
-            BidSure AI — End-to-End Compliance Verification Pipeline
+            SatyaSetu — End-to-End Compliance Verification Pipeline
           </p>
         </DialogHeader>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Badge } from "@/components/ui/badge";
@@ -67,11 +68,17 @@ export function AppHeader() {
                 <SheetContent side="left" className="w-[280px] p-0 flex flex-col bg-white">
                   <SheetHeader className="p-4 border-b text-left">
                     <SheetTitle className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1e3a5f] shrink-0">
-                        <Shield className="h-4.5 w-4.5 text-white" />
+                      <div className="relative h-8 w-8 shrink-0">
+                        <Image
+                          src="/satyaseetu-logo.png"
+                          alt="Satyaseetu Logo"
+                          fill
+                          sizes="32px"
+                          className="object-contain"
+                        />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-[#1e3a5f] leading-none">BidSure AI</p>
+                        <p className="text-sm font-bold text-[#1e3a5f] leading-none">SatyaSetu</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Government Procurement</p>
                       </div>
                     </SheetTitle>
@@ -160,12 +167,18 @@ export function AppHeader() {
               href={user?.role === "officer" ? "/officer" : user ? "/bidder" : "/"}
               className="flex items-center gap-2 sm:gap-2.5"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1e3a5f] shrink-0">
-                <Shield className="h-4.5 w-4.5 text-white" />
+              <div className="relative h-8 w-8 shrink-0">
+                <Image
+                  src="/satyaseetu-logo.png"
+                  alt="Satyaseetu Logo"
+                  fill
+                  sizes="32px"
+                  className="object-contain"
+                />
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-bold tracking-tight text-[#1e3a5f] leading-none">
-                  BidSure AI
+                  SatyaSetu
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-none mt-0.5 hidden xs:inline sm:inline">
                   Bid Compliance Verification
