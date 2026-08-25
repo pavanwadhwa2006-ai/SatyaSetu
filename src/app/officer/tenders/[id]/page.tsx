@@ -17,6 +17,8 @@ import {
   ArrowRight, Users, Brain,
 } from "lucide-react";
 
+import { PreviousButton } from "@/components/shared/previous-button";
+
 export default function TenderEvaluationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const tender = getTenderById(id);
@@ -33,11 +35,16 @@ export default function TenderEvaluationPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-        <Link href="/officer" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="font-medium text-foreground">Bid Evaluation</span>
+      {/* Breadcrumb & Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+          <Link href="/officer" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
+          <span className="text-muted-foreground">/</span>
+          <Link href="/officer/tenders" className="text-muted-foreground hover:text-foreground">Tenders</Link>
+          <span className="text-muted-foreground">/</span>
+          <span className="font-medium text-foreground">Bid Evaluation</span>
+        </div>
+        <PreviousButton fallbackHref="/officer/tenders" />
       </div>
 
       {/* Header */}

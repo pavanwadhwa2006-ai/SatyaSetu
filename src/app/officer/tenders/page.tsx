@@ -8,13 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Building2, Calendar, IndianRupee } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
+import { PreviousButton } from "@/components/shared/previous-button";
+
 export default function OfficerTendersPage() {
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg sm:text-xl font-semibold text-[#1e3a5f]">Tender Evaluations</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">Select a tender to evaluate submitted bids</p>
+        <div className="flex items-center gap-3">
+          <PreviousButton fallbackHref="/officer" />
+          <div>
+            <h1 className="text-lg sm:text-xl font-semibold text-[#1e3a5f]">Tender Evaluations</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Select a tender to evaluate submitted bids</p>
+          </div>
         </div>
         <Badge variant="outline" className="text-[10px] sm:text-xs">Prototype Tender Data</Badge>
       </div>

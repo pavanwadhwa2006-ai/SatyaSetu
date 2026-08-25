@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/compliance/status-badge";
 import { Brain, FileText } from "lucide-react";
+import { PreviousButton } from "@/components/shared/previous-button";
 
 export default function AIVerificationPage({ params }: { params: Promise<{ id: string; bidderId: string }> }) {
   const { id, bidderId } = use(params);
@@ -18,13 +19,16 @@ export default function AIVerificationPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-        <Link href="/officer" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
-        <span className="text-muted-foreground">/</span>
-        <Link href={`/officer/tenders/${id}/bidders/${bidderId}`} className="text-muted-foreground hover:text-foreground">{bidder.shortName}</Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="font-medium text-foreground">AI Verification</span>
+      {/* Breadcrumb & Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+          <Link href="/officer" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
+          <span className="text-muted-foreground">/</span>
+          <Link href={`/officer/tenders/${id}/bidders/${bidderId}`} className="text-muted-foreground hover:text-foreground">{bidder.shortName}</Link>
+          <span className="text-muted-foreground">/</span>
+          <span className="font-medium text-foreground">AI Verification</span>
+        </div>
+        <PreviousButton fallbackHref={`/officer/tenders/${id}/bidders/${bidderId}`} />
       </div>
 
       <div>

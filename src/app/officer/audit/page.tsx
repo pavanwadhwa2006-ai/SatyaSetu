@@ -5,18 +5,22 @@ import { bidders } from "@/data/bidders";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollText, ArrowRight, Building2 } from "lucide-react";
+import { PreviousButton } from "@/components/shared/previous-button";
 
 export default function OfficerAuditPage() {
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-lg sm:text-xl font-semibold text-[#1e3a5f] flex items-center gap-2">
-          <ScrollText className="h-5 w-5" />
-          Audit Logs
-        </h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-          Select a bidder to inspect complete verification and decision audit trails
-        </p>
+      <div className="flex items-center gap-3">
+        <PreviousButton fallbackHref="/officer" />
+        <div>
+          <h1 className="text-lg sm:text-xl font-semibold text-[#1e3a5f] flex items-center gap-2">
+            <ScrollText className="h-5 w-5" />
+            Audit Logs
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Select a bidder to inspect complete verification and decision audit trails
+          </p>
+        </div>
       </div>
 
       <div className="space-y-3">

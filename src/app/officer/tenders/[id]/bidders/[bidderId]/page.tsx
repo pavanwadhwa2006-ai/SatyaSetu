@@ -16,6 +16,8 @@ import {
   Brain, FileText,
 } from "lucide-react";
 
+import { PreviousButton } from "@/components/shared/previous-button";
+
 export default function BidderCompliancePage({ params }: { params: Promise<{ id: string; bidderId: string }> }) {
   const { id, bidderId } = use(params);
   const bidder = getBidderById(bidderId);
@@ -36,13 +38,16 @@ export default function BidderCompliancePage({ params }: { params: Promise<{ id:
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-        <Link href="/officer" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
-        <span className="text-muted-foreground">/</span>
-        <Link href={`/officer/tenders/${id}`} className="text-muted-foreground hover:text-foreground">Bid Evaluation</Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="font-medium text-foreground">{bidder.shortName}</span>
+      {/* Breadcrumb & Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+          <Link href="/officer" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
+          <span className="text-muted-foreground">/</span>
+          <Link href={`/officer/tenders/${id}`} className="text-muted-foreground hover:text-foreground">Bid Evaluation</Link>
+          <span className="text-muted-foreground">/</span>
+          <span className="font-medium text-foreground">{bidder.shortName}</span>
+        </div>
+        <PreviousButton fallbackHref={`/officer/tenders/${id}`} />
       </div>
 
       {/* Header */}

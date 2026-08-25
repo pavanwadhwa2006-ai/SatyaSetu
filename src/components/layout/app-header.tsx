@@ -24,6 +24,8 @@ import { useState } from "react";
 import { ArchitectureModal } from "@/components/shared/architecture-modal";
 import { cn } from "@/lib/utils";
 
+import { PreviousButton } from "@/components/shared/previous-button";
+
 const bidderNav = [
   { label: "Dashboard", href: "/bidder", icon: LayoutDashboard },
   { label: "Available Tenders", href: "/bidder/tenders", icon: FileText },
@@ -185,6 +187,13 @@ export function AppHeader() {
                 </span>
               </div>
             </Link>
+
+            {/* Officer Previous Site / Page Button */}
+            {pathname.startsWith("/officer") && pathname !== "/officer" && (
+              <div className="flex items-center ml-1 sm:ml-2 pl-1 sm:pl-2 border-l">
+                <PreviousButton fallbackHref="/officer" className="h-7 px-2 text-xs" />
+              </div>
+            )}
           </div>
 
           {/* Right: Role, User info & Logout */}
@@ -226,8 +235,9 @@ export function AppHeader() {
                 variant="ghost"
                 size="sm"
                 onClick={logout}
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md cursor-pointer transition-colors shrink-0"
                 title="Logout"
+                aria-label="Logout"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
