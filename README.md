@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Satyaseetu — AI-Powered Integrated Bid Compliance Verification Platform
 
-## Getting Started
+## Purpose
+Satyaseetu is an AI-assisted procurement compliance and decision-support platform for GeM procurement workflows. It is not a replacement for GeM and does not make the final procurement decision.
 
-First, run the development server:
+## Current Goal
+Build a technically realistic, end-to-end internal-hackathon MVP from the existing Satyaseetu prototype.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Core Workflow
+Tender → Requirements → Bidders → Documents → Extracted Evidence → Verification → Rules → Compliance → Review → Report → Audit
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Product Principle
+AI assists the Procurement Officer; it does not replace the Procurement Officer.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Current Phase
+Phase 1 — Foundation: database, authentication, backend/API foundation, RBAC, storage foundation, project integration.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Source of Truth
+See `docs/MASTER_ARCHITECTURE.md` and the provided SIH26100 master architecture document.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Rules
+- Do not fabricate live government API integrations.
+- Use synthetic bidder data/documents for the prototype.
+- Use real/public tender documents where appropriate.
+- Keep AI separate from deterministic compliance rules.
+- Preserve source evidence and auditability.
+- Never hardcode final compliance results.

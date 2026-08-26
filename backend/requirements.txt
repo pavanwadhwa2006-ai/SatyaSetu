@@ -1,0 +1,30 @@
+# ============================================================
+# SatyaSetu Backend — Python Dependencies
+# FastAPI + Supabase + Pydantic + testing
+# ============================================================
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Data validation
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# Supabase client (uses service role key server-side)
+supabase==2.11.0
+
+# HTTP client (used by supabase-py)
+httpx==0.28.1
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.2
+httpx==0.28.1
+
+# Environment
+python-dotenv==1.0.1
+
+# Security / JWT verification
+PyJWT==2.10.1
+cryptography==44.0.0
