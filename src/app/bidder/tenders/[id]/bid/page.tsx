@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import {
   fetchBackendTenderById,
-  fetchGroundTruthBidders,
   createOrResumeBidSubmission,
   fetchBidSubmissionById,
   uploadBidDocument,
@@ -28,6 +27,7 @@ import {
   DocumentFact,
   DocumentProcessResult,
 } from "@/lib/api-client";
+import { groundTruthBidders, groundTruthTenders } from "@/data/ground-truth";
 
 const CANONICAL_DOC_TYPES = [
   { value: "TURNOVER_CERTIFICATE", label: "CA Audited Turnover Certificate" },
@@ -71,23 +71,23 @@ export default function BidSubmissionWorkspacePage({ params }: { params: Promise
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [availableBidders, setAvailableBidders] = useState<any[]>([]);
-
-  // Load tender, bidder profiles, and active submission from backend
+  // Load tender and active submission
   useEffect(() => {
     async function initWorkspace() {
       setLoading(true);
       setErrorMessage(null);
 
       try {
-        // 1. Resolve tender details & bidder profiles from backend
-        const [tData, bData] = await Promise.all([
-          fetchBackendTenderById(decodedTenderId),
-          fetchGroundTruthBidders().catch(() => ({ items: [], total: 0 })),
-        ]);
+        // 1. Resolve tender details
+        let tData = null;
+        try {
+          tData = await fetchBackendTenderById(decodedTenderId);
+        } catch {
+          tData = groundTruthTenders.find(
+            (t) => t.id === decodedTenderId || t.bidNumber === decodedTenderId
+          );
+        }
         setTender(tData);
-        const bList = bData.items || [];
-        setAvailableBidders(bList);
 
         // 2. Resolve or load existing submission
         const existingSubId = searchParams.get("submission_id");
@@ -96,25 +96,20 @@ export default function BidSubmissionWorkspacePage({ params }: { params: Promise
           setSubmission(subData);
         } else {
           // Find matching default vendor for this tender
-          const matchedBidder = bList.find(
-            (b: any) =>
-              b.tenderId === decodedTenderId ||
-              (tData && (b.tenderId === tData.id || b.tenderId === tData.tender_number))
-          ) || bList[0];
+          const matchedBidder = groundTruthBidders.find(
+            (b) => b.tenderId === decodedTenderId || (tData && (b.tenderId === tData.id || b.tenderId === tData.tender_number))
+          ) || groundTruthBidders[1]; // default Vanguard
 
-          if (matchedBidder) {
-            setSelectedVendorCode(matchedBidder.bidderCode);
-          }
-          const vendorRef = matchedBidder ? matchedBidder.legalName : "Vanguard Seating Systems Pvt Ltd";
+          setSelectedVendorCode(matchedBidder.bidderCode);
           const newSub = await createOrResumeBidSubmission(
             tData?.tender_number || tData?.id || decodedTenderId,
-            vendorRef
+            matchedBidder.legalName
           );
           setSubmission(newSub);
         }
       } catch (err: any) {
         console.error("Workspace initialization error:", err);
-        setErrorMessage(err.message || "Could not initialize submission workspace from backend.");
+        setErrorMessage(err.message || "Could not initialize submission workspace.");
       } finally {
         setLoading(false);
       }
@@ -371,23 +366,23 @@ export default function BidSubmissionWorkspacePage({ params }: { params: Promise
         <CardContent className="p-4 sm:p-5">
           <div className="space-y-2">
             <Label className="text-xs text-slate-600 font-medium">
-              Select Bidder Organization Profile (Loaded dynamically from backend API):
+              Select Bidder Organization Profile (Phase 4 Synthetic Benchmark Bidders):
             </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {availableBidders.map((b) => (
+              {groundTruthBidders.map((b) => (
                 <button
-                  key={b.bidderCode || b.id}
+                  key={b.bidderCode}
                   disabled={isSubmitted}
-                  onClick={() => handleVendorSwitch(b.legalName || b.legal_name, b.bidderCode || b.id)}
+                  onClick={() => handleVendorSwitch(b.legalName, b.bidderCode)}
                   className={`p-3 rounded-lg border text-left text-xs transition-all ${
-                    selectedVendorCode === (b.bidderCode || b.id)
+                    selectedVendorCode === b.bidderCode
                       ? "border-[#1e3a5f] bg-[#1e3a5f]/5 ring-1 ring-[#1e3a5f]"
                       : "border-slate-200 hover:border-slate-300 bg-white"
                   } ${isSubmitted ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}`}
                 >
-                  <div className="font-semibold text-slate-900 truncate">{b.legalName || b.legal_name}</div>
+                  <div className="font-semibold text-slate-900 truncate">{b.legalName}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
-                    Code: <span className="font-mono">{b.bidderCode || b.id.substring(0, 8)}</span> · {b.businessType || b.business_type || "Vendor"}
+                    Code: <span className="font-mono">{b.bidderCode}</span> · {b.businessType}
                   </div>
                 </button>
               ))}

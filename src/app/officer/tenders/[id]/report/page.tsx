@@ -1,95 +1,30 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use } from "react";
 import Link from "next/link";
+import { getTenderById } from "@/data/tenders";
+import { getBidsByTender } from "@/data/bids";
+import { getComplianceByTender } from "@/data/compliance";
+import { riskAssessments, aiRecommendations } from "@/data/risk-and-recommendations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/compliance/status-badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Download, Printer, Loader2, AlertCircle,
+  Download, Printer,
 } from "lucide-react";
 import { PreviousButton } from "@/components/shared/previous-button";
-import {
-  fetchBackendTenderById,
-  fetchTenderRequirements,
-  fetchGroundTruthBenchmarks,
-  fetchGroundTruthBidders,
-  BackendTender,
-  StructuredRequirement,
-  GroundTruthBenchmark,
-} from "@/lib/api-client";
 
 export default function EvaluationReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const decodedId = decodeURIComponent(id);
+  const tender = getTenderById(id);
+  const bids = getBidsByTender(id);
+  const compliance = getComplianceByTender(id);
 
-  const [tender, setTender] = useState<BackendTender | null>(null);
-  const [requirements, setRequirements] = useState<StructuredRequirement[]>([]);
-  const [benchmarks, setBenchmarks] = useState<GroundTruthBenchmark[]>([]);
-  const [bidders, setBidders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [tenderData, reqData, benchData, bidderData] = await Promise.all([
-          fetchBackendTenderById(decodedId),
-          fetchTenderRequirements(decodedId).catch(() => ({ items: [], total: 0 })),
-          fetchGroundTruthBenchmarks().catch(() => ({ items: [], total: 0 })),
-          fetchGroundTruthBidders().catch(() => ({ items: [], total: 0 })),
-        ]);
-        setTender(tenderData);
-        setRequirements(reqData.items || []);
-        setBenchmarks(benchData.items || []);
-        setBidders(bidderData.items || []);
-      } catch (err: any) {
-        console.error("Failed to load evaluation report data:", err);
-        setError(err.message || "Failed to load evaluation report.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, [decodedId]);
-
-  if (loading) {
-    return (
-      <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-[#1e3a5f]" />
-        <p className="text-sm text-muted-foreground">Generating evaluation report from backend...</p>
-      </div>
-    );
-  }
-
-  if (error || !tender) {
-    return (
-      <div className="p-6 max-w-4xl mx-auto space-y-4">
-        <PreviousButton fallbackHref="/officer/reports" />
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 text-sm p-4 rounded-lg flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-          <span>{error || "Tender not found in database."}</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Filter bidders for this tender
-  const tenderBidders = bidders.filter(
-    (b) =>
-      b.tenderId === tender.id ||
-      b.tenderId === tender.tender_number ||
-      (tender.tender_number === "GEM/2026/B/7261466" && b.tenderId === "tender-t1") ||
-      (tender.tender_number === "GEM/2026/B/7364888" && b.tenderId === "tender-t2") ||
-      (tender.tender_number === "GEM/2026/B/7676747" && b.tenderId === "tender-t3")
-  );
+  if (!tender) return <div className="p-6">Tender not found.</div>;
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
@@ -98,13 +33,11 @@ export default function EvaluationReportPage({ params }: { params: Promise<{ id:
         <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
           <Link href="/officer" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
           <span className="text-muted-foreground">/</span>
-          <Link href={`/officer/tenders/${encodeURIComponent(tender.tender_number || tender.id)}`} className="text-muted-foreground hover:text-foreground">
-            Evaluation
-          </Link>
+          <Link href={`/officer/tenders/${id}`} className="text-muted-foreground hover:text-foreground">Evaluation</Link>
           <span className="text-muted-foreground">/</span>
           <span className="font-medium text-foreground">Report</span>
         </div>
-        <PreviousButton fallbackHref={`/officer/tenders/${encodeURIComponent(tender.tender_number || tender.id)}`} />
+        <PreviousButton fallbackHref={`/officer/tenders/${id}`} />
       </div>
 
       {/* Report Header */}
@@ -112,104 +45,102 @@ export default function EvaluationReportPage({ params }: { params: Promise<{ id:
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-[#1e3a5f]">Bid Evaluation &amp; Compliance Report</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">Generated by SatyaSetu · GeM Public Procurement Engine</p>
+              <h1 className="text-lg sm:text-xl font-bold text-[#1e3a5f]">Bid Evaluation Report</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">Generated by SatyaSetu · Prototype Report</p>
             </div>
             <div className="flex items-center gap-2 self-start sm:self-auto">
               <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => window.print()}>
                 <Printer className="h-3.5 w-3.5" /> Print
               </Button>
-              <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1 text-xs" onClick={() => window.print()}>
+              <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1 text-xs">
                 <Download className="h-3.5 w-3.5" /> Export PDF
               </Button>
             </div>
           </div>
 
+          {/* Tender Details */}
+          <div className="rounded-md border p-3.5 sm:p-4 space-y-2 mb-4 bg-card">
+            <h2 className="text-xs sm:text-sm font-semibold">1. Tender Details</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
+              <div className="flex justify-between items-start gap-2"><span className="text-muted-foreground shrink-0">Tender ID</span><span className="font-mono">{tender.id}</span></div>
+              <div className="flex justify-between items-start gap-2"><span className="text-muted-foreground shrink-0">Organization</span><span className="text-right">{tender.organization}</span></div>
+              <div className="flex justify-between items-start gap-2 sm:col-span-2"><span className="text-muted-foreground shrink-0">Title</span><span className="text-right">{tender.title}</span></div>
+              <div className="flex justify-between items-start gap-2"><span className="text-muted-foreground shrink-0">Value</span><span className="font-semibold">{tender.estimatedValueFormatted}</span></div>
+            </div>
+          </div>
+
+          {/* Bidder Summary */}
+          <div className="rounded-md border p-3.5 sm:p-4 mb-4 bg-card">
+            <h2 className="text-xs sm:text-sm font-semibold mb-3">2. Bidder Evaluation Summary</h2>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[140px]">Bidder</TableHead>
+                    <TableHead>Compliance</TableHead>
+                    <TableHead>Risk</TableHead>
+                    <TableHead className="min-w-[100px]">Commercial</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="min-w-[130px]">Recommendation</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bids.map((bid) => {
+                    const comp = compliance.find(c => c.bidderId === bid.bidderId);
+                    const risk = riskAssessments.find(r => r.bidderId === bid.bidderId);
+                    const rec = aiRecommendations.find(r => r.bidderId === bid.bidderId);
+                    return (
+                      <TableRow key={bid.id}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{bid.bidder.shortName}</TableCell>
+                        <TableCell className="font-bold text-xs sm:text-sm">{comp?.complianceScore}%</TableCell>
+                        <TableCell><StatusBadge status={risk?.riskLevel ?? "LOW"} size="sm" showIcon={false} /></TableCell>
+                        <TableCell className="text-xs sm:text-sm whitespace-nowrap">{bid.commercial.totalAmountFormatted}</TableCell>
+                        <TableCell><StatusBadge status={comp?.overallStatus ?? "PASS"} size="sm" /></TableCell>
+                        <TableCell><StatusBadge status={rec?.recommendation ?? "QUALIFY"} size="sm" /></TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Sections */}
+          {["3. Requirement Compliance Details", "4. Document Verification Summary", "5. Government Verification Status", "6. Risk Assessment", "7. AI Recommendations"].map((section) => (
+            <div key={section} className="rounded-md border p-3.5 sm:p-4 mb-4 bg-card">
+              <h2 className="text-xs sm:text-sm font-semibold">{section}</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Detailed {section.toLowerCase().split(". ")[1]} information available in full report export.
+              </p>
+            </div>
+          ))}
+
+          {/* Officer Decision */}
+          <div className="rounded-md border p-3.5 sm:p-4 mb-4 bg-card">
+            <h2 className="text-xs sm:text-sm font-semibold">8. Officer Decision</h2>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Final procurement decisions are recorded by the authorized Procurement Officer
+              and are binding as per applicable government procurement rules.
+            </p>
+          </div>
+
+          {/* Audit Trail */}
+          <div className="rounded-md border p-3.5 sm:p-4 bg-card">
+            <h2 className="text-xs sm:text-sm font-semibold">9. Audit Trail</h2>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Complete audit trail with timestamps, actors, and actions is maintained for
+              every bid evaluation. This ensures full traceability and accountability.
+            </p>
+          </div>
+
           <Separator className="my-4" />
 
-          {/* Tender Metadata */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">Tender Number</p>
-              <p className="font-mono font-bold text-slate-800 mt-0.5">{tender.tender_number}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Estimated Value</p>
-              <p className="font-bold text-slate-900 mt-0.5">₹{(tender.estimated_value / 100000).toFixed(2)} Lakh</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Tender Status</p>
-              <Badge variant="outline" className="mt-0.5 text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
-                {tender.status}
-              </Badge>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Requirements Count</p>
-              <p className="font-bold text-slate-900 mt-0.5">{requirements.length} Clauses</p>
-            </div>
-          </div>
-
-          <div className="mt-3 pt-3 border-t text-xs">
-            <span className="text-muted-foreground">Title: </span>
-            <span className="font-medium text-slate-900">{tender.title}</span>
-            <span className="text-muted-foreground"> · Buyer: </span>
-            <span className="font-medium text-slate-900">{tender.organization}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bidder Evaluation Summary */}
-      <Card>
-        <CardContent className="p-4 sm:p-6 space-y-3">
-          <h2 className="font-semibold text-sm sm:text-base text-slate-900">Bidder Compliance &amp; Benchmark Summary</h2>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[160px]">Bidder Entity</TableHead>
-                  <TableHead className="w-[100px]">Code</TableHead>
-                  <TableHead className="w-[140px]">Overall Status</TableHead>
-                  <TableHead className="w-[110px]">Score</TableHead>
-                  <TableHead className="w-[110px]">Risk Level</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tenderBidders.map((bidder) => {
-                  const bench = benchmarks.find((b) => b.bidderId === bidder.id || b.bidderCode === bidder.bidderCode);
-
-                  return (
-                    <TableRow key={bidder.id}>
-                      <TableCell className="font-semibold text-xs text-slate-900">
-                        {bidder.legalName}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-slate-700">
-                        {bidder.bidderCode}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={bench?.expectedOverallStatus || "REVIEW"} size="sm" />
-                      </TableCell>
-                      <TableCell className="font-bold text-xs">
-                        {bench ? `${bench.expectedComplianceScore}%` : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${
-                            bench?.expectedRiskLevel === "LOW"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : bench?.expectedRiskLevel === "HIGH" || bench?.expectedRiskLevel === "CRITICAL"
-                              ? "bg-rose-50 text-rose-700 border-rose-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
-                          }`}
-                        >
-                          {bench?.expectedRiskLevel || "MEDIUM"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+          <div className="text-center px-2">
+            <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
+              This report was generated by SatyaSetu — Prototype for Smart India Hackathon 2026.
+              <br />
+              All verification sources are mock/prototype implementations. AI recommendations are advisory only.
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -92,18 +92,3 @@ def test_get_tender_not_found():
     """Verify GET /api/tenders/{invalid_id} returns 404."""
     response = client.get("/api/tenders/00000000-0000-0000-0000-000000000000")
     assert response.status_code == 404
-
-
-def test_get_dashboard_stats():
-    """Verify GET /api/dashboard/stats returns dynamic database-calculated metrics."""
-    response = client.get("/api/dashboard/stats")
-    assert response.status_code == 200
-    data = response.json()
-    assert "active_tenders" in data
-    assert "total_tenders" in data
-    assert "total_bids" in data
-    assert "submitted_bids" in data
-    assert "draft_bids" in data
-    assert "total_vendors" in data
-    assert data["total_tenders"] >= 5
-    assert data["active_tenders"] >= 3

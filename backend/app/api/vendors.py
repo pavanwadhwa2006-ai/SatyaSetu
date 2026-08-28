@@ -7,8 +7,7 @@ POST /api/vendors     — register a vendor profile (any authenticated user)
 
 from fastapi import APIRouter, Depends, Query, status
 
-from typing import Optional
-from app.core.dependencies import require_officer, require_any_authenticated, get_current_user_optional
+from app.core.dependencies import require_officer, require_any_authenticated
 from app.schemas.auth import CurrentUser
 from app.schemas.vendor import VendorCreate, VendorResponse, VendorListResponse
 from app.services import vendor_service
@@ -20,12 +19,19 @@ router = APIRouter(prefix="/vendors", tags=["vendors"])
     "",
     response_model=VendorListResponse,
     summary="List all vendors",
-    description="Returns all registered vendor profiles. Public/accessible to all users.",
+    description=(
+        "Returns all registered vendor profiles. "
+        "Restricted to PROCUREMENT_OFFICER role."
+    ),
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not a Procurement Officer"},
+    },
 )
 def list_vendors(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
-    current_user: Optional[CurrentUser] = Depends(get_current_user_optional),
+    current_user: CurrentUser = Depends(require_officer),
 ) -> VendorListResponse:
     return vendor_service.list_vendors(limit=limit, offset=offset)
 

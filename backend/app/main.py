@@ -23,7 +23,6 @@ from app.api import (
     tender_intelligence,
     bid_submissions,
     document_intelligence,
-    dashboard,
 )
 
 # ── Logging ────────────────────────────────────────────────────────────────────
@@ -88,7 +87,6 @@ def create_app() -> FastAPI:
     app.include_router(tender_intelligence.router, prefix=API_PREFIX)
     app.include_router(bid_submissions.router, prefix=API_PREFIX)
     app.include_router(document_intelligence.router, prefix=API_PREFIX)
-    app.include_router(dashboard.router, prefix=API_PREFIX)
 
     return app
 
