@@ -1,231 +1,411 @@
 -- ============================================================
--- SatyaSetu — Phase 1 Database Schema
--- Run this in: Supabase → SQL Editor → New Query → Run
---
--- IMPORTANT:
---   This uses Supabase Auth (auth.users) as the identity source.
---   The user_profiles table extends auth.users with app-level data.
---
--- Do NOT run this on a production database with existing data
--- without reviewing the DROP TABLE statements at the top.
+-- SatyaSetu — Final Database Schema (Officer → AI → Bidder Flow)
+-- One-time setup only.
+-- Future operations happen through backend APIs, not manual SQL.
 -- ============================================================
 
--- Enable UUID extension (already enabled in Supabase by default)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================
--- TABLE: user_profiles
--- Extends Supabase Auth users with application role and profile.
--- Linked 1:1 to auth.users via id.
--- Role is ALWAYS read from this table by the backend — never
--- trusted from frontend or JWT claims.
+-- USER PROFILES
 -- ============================================================
+
 CREATE TABLE IF NOT EXISTS public.user_profiles (
-    id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    role        TEXT NOT NULL CHECK (role IN ('BIDDER', 'PROCUREMENT_OFFICER')),
-    full_name   TEXT,
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+
+    role TEXT NOT NULL CHECK (
+        role IN ('BIDDER','PROCUREMENT_OFFICER')
+    ),
+
+    full_name TEXT,
     organization TEXT,
     designation TEXT,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 COMMENT ON TABLE public.user_profiles IS
-    'Application-level user profiles. Role is authoritative here — never trust role from JWT or frontend.';
-
-COMMENT ON COLUMN public.user_profiles.role IS
-    'BIDDER or PROCUREMENT_OFFICER. Backend always reads from here for RBAC.';
+'Application user profile extending Supabase Auth.';
 
 -- ============================================================
--- TABLE: tenders
--- Stores government procurement tender records.
--- Source can be SYNTHETIC (Phase 1), GEM_PUBLIC (Phase 2), etc.
+-- TENDERS
+-- Officers publish tenders.
+-- Gemini extracts requirements.
 -- ============================================================
+
 CREATE TABLE IF NOT EXISTS public.tenders (
-    id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tender_number        TEXT UNIQUE NOT NULL,
-    title                TEXT NOT NULL,
-    organization         TEXT NOT NULL,
-    department           TEXT,
-    category             TEXT,
-    description          TEXT,
-    source               TEXT NOT NULL DEFAULT 'SYNTHETIC',
-    status               TEXT NOT NULL DEFAULT 'OPEN'
-                            CHECK (status IN ('OPEN', 'EVALUATION', 'CLOSED', 'AWARDED')),
-    estimated_value      BIGINT,           -- in paise (smallest unit) or raw INR integer
-    submission_deadline  TIMESTAMPTZ,
-    publish_date         DATE,
-    bid_validity_days    INTEGER,
-    evaluation_type      TEXT,
-    delivery_location    TEXT,
+
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    tender_number TEXT UNIQUE NOT NULL,
+
+    title TEXT NOT NULL,
+
+    organization TEXT NOT NULL,
+
+    department TEXT,
+
+    category TEXT,
+
+    description TEXT,
+
+    source TEXT DEFAULT 'MANUAL',
+
+    status TEXT NOT NULL DEFAULT 'DRAFT'
+    CHECK (
+        status IN (
+            'DRAFT',
+            'OPEN',
+            'EVALUATION',
+            'CLOSED',
+            'AWARDED'
+        )
+    ),
+
+    estimated_value BIGINT,
+
+    submission_deadline TIMESTAMPTZ,
+
+    publish_date DATE,
+
+    bid_validity_days INTEGER,
+
+    evaluation_type TEXT,
+
+    delivery_location TEXT,
+
     delivery_period_days INTEGER,
-    warranty_months      INTEGER,
-    emd_amount           BIGINT,
-    created_by           UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+    warranty_months INTEGER,
+
+    emd_amount BIGINT,
+
+    extracted_requirements JSONB,
+
+    extraction_status TEXT DEFAULT 'PENDING'
+    CHECK (
+        extraction_status IN (
+            'PENDING',
+            'PROCESSING',
+            'COMPLETED',
+            'FAILED'
+        )
+    ),
+
+    extracted_at TIMESTAMPTZ,
+
+    created_by UUID REFERENCES public.user_profiles(id)
+        ON DELETE SET NULL,
+
+    published_by UUID REFERENCES public.user_profiles(id)
+        ON DELETE SET NULL,
+
+    published_at TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 COMMENT ON TABLE public.tenders IS
-    'Procurement tender records. Phase 1 uses SYNTHETIC source. Phase 2 will add GEM_PUBLIC source.';
-
-COMMENT ON COLUMN public.tenders.estimated_value IS
-    'Estimated tender value in INR (integer). Future: store in paise for precision.';
-
-COMMENT ON COLUMN public.tenders.source IS
-    'Data origin: SYNTHETIC (Phase 1), GEM_PUBLIC (Phase 2+), MANUAL, etc.';
+'Officer-published tenders with AI extracted requirements.';
 
 -- ============================================================
--- TABLE: tender_documents
--- Stores uploaded tender document metadata.
--- Actual files live in Supabase Storage bucket: tender-documents
--- OCR/processing is NOT implemented in Phase 1.
+-- TENDER DOCUMENTS
+-- Metadata only.
+-- Files live in Storage bucket: tender-documents
 -- ============================================================
+
 CREATE TABLE IF NOT EXISTS public.tender_documents (
-    id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tender_id         UUID NOT NULL REFERENCES public.tenders(id) ON DELETE CASCADE,
+
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    tender_id UUID NOT NULL REFERENCES public.tenders(id)
+        ON DELETE CASCADE,
+
     original_filename TEXT NOT NULL,
-    storage_path      TEXT,               -- path within Supabase Storage bucket
-    mime_type         TEXT,
-    file_size         BIGINT,             -- in bytes
-    processing_status TEXT NOT NULL DEFAULT 'UPLOADED'
-                        CHECK (processing_status IN ('UPLOADED', 'PROCESSING', 'PROCESSED', 'FAILED')),
-    uploaded_by       UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+    storage_path TEXT,
+
+    mime_type TEXT,
+
+    file_size BIGINT,
+
+    processing_status TEXT DEFAULT 'UPLOADED'
+    CHECK (
+        processing_status IN (
+            'UPLOADED',
+            'PROCESSING',
+            'PROCESSED',
+            'FAILED'
+        )
+    ),
+
+    uploaded_by UUID REFERENCES public.user_profiles(id)
+        ON DELETE SET NULL,
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 COMMENT ON TABLE public.tender_documents IS
-    'Uploaded tender document metadata. Files stored in Supabase Storage bucket tender-documents. Processing not yet implemented (Phase 5+).';
-
-COMMENT ON COLUMN public.tender_documents.processing_status IS
-    'UPLOADED: file received. PROCESSING: OCR/AI in progress. PROCESSED: complete. FAILED: error. Phase 1 only uses UPLOADED.';
+'Tender PDF metadata. Actual files are stored in Supabase Storage.';
 
 -- ============================================================
--- TABLE: vendors
--- Vendor/company profiles. May or may not have a user account.
--- user_id links to auth user if the vendor has registered.
+-- VENDORS
+-- Company profile.
 -- ============================================================
+
 CREATE TABLE IF NOT EXISTS public.vendors (
-    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id      UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
-    legal_name   TEXT NOT NULL,
+
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    user_id UUID REFERENCES public.user_profiles(id)
+        ON DELETE SET NULL,
+
+    legal_name TEXT NOT NULL,
+
     display_name TEXT,
-    status       TEXT NOT NULL DEFAULT 'ACTIVE'
-                    CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+    status TEXT DEFAULT 'ACTIVE'
+    CHECK (
+        status IN (
+            'ACTIVE',
+            'INACTIVE',
+            'SUSPENDED'
+        )
+    ),
+
+    is_primary_contact BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 COMMENT ON TABLE public.vendors IS
-    'Vendor company profiles. user_id is nullable — a vendor may exist before registering an account.';
-
-COMMENT ON COLUMN public.vendors.user_id IS
-    'Links to user_profiles if the vendor has a registered user account. Nullable.';
+'Vendor company profiles.';
 
 -- ============================================================
--- TABLE: bid_submissions
--- A bid is a vendor''s participation in a tender.
--- One vendor can only submit one bid per tender (UNIQUE constraint).
+-- BID SUBMISSIONS
+-- Created automatically when bidder submits.
+-- AI writes verification here.
 -- ============================================================
+
 CREATE TABLE IF NOT EXISTS public.bid_submissions (
-    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tender_id    UUID NOT NULL REFERENCES public.tenders(id) ON DELETE CASCADE,
-    vendor_id    UUID NOT NULL REFERENCES public.vendors(id) ON DELETE CASCADE,
-    status       TEXT NOT NULL DEFAULT 'DRAFT'
-                    CHECK (status IN (
-                        'DRAFT', 'SUBMITTED', 'UNDER_EVALUATION',
-                        'QUALIFIED', 'DISQUALIFIED', 'CLARIFICATION_REQUESTED'
-                    )),
+
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    tender_id UUID NOT NULL REFERENCES public.tenders(id)
+        ON DELETE CASCADE,
+
+    vendor_id UUID NOT NULL REFERENCES public.vendors(id)
+        ON DELETE CASCADE,
+
+    status TEXT DEFAULT 'DRAFT'
+    CHECK (
+        status IN (
+            'DRAFT',
+            'SUBMITTED',
+            'UNDER_EVALUATION',
+            'QUALIFIED',
+            'DISQUALIFIED',
+            'CLARIFICATION_REQUESTED'
+        )
+    ),
+
+    ai_verification_status TEXT DEFAULT 'PENDING'
+    CHECK (
+        ai_verification_status IN (
+            'PENDING',
+            'PROCESSING',
+            'VERIFIED',
+            'NEEDS_REVIEW'
+        )
+    ),
+
+    ai_score NUMERIC(5,2),
+
+    ai_summary TEXT,
+
+    verification_results JSONB,
+
+    verified_at TIMESTAMPTZ,
+
+    verified_by UUID REFERENCES public.user_profiles(id)
+        ON DELETE SET NULL,
+
     submitted_at TIMESTAMPTZ,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_bid_per_tender_vendor UNIQUE (tender_id, vendor_id)
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT uq_bid_per_tender_vendor
+        UNIQUE(tender_id,vendor_id)
 );
 
 COMMENT ON TABLE public.bid_submissions IS
-    'A vendor''s bid for a specific tender. One vendor can submit exactly one bid per tender.';
+'One vendor may submit exactly one bid per tender.';
 
 -- ============================================================
--- TABLE: vendor_documents
--- Stores uploaded bidder document metadata.
--- Actual files live in Supabase Storage bucket: vendor-documents
--- OCR/classification not yet implemented.
+-- VENDOR DOCUMENTS
+-- Uploaded bidder PDFs.
+-- OCR stores extracted data here.
 -- ============================================================
+
 CREATE TABLE IF NOT EXISTS public.vendor_documents (
-    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    bid_submission_id   UUID REFERENCES public.bid_submissions(id) ON DELETE CASCADE,
-    vendor_id           UUID NOT NULL REFERENCES public.vendors(id) ON DELETE CASCADE,
-    original_filename   TEXT NOT NULL,
-    storage_path        TEXT,             -- path within Supabase Storage bucket
-    mime_type           TEXT,
-    file_size           BIGINT,           -- in bytes
-    document_type       TEXT,             -- PAN_CERTIFICATE, GST_CERTIFICATE, etc. (future classification)
-    processing_status   TEXT NOT NULL DEFAULT 'UPLOADED'
-                          CHECK (processing_status IN ('UPLOADED', 'PROCESSING', 'PROCESSED', 'FAILED')),
-    uploaded_by         UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    bid_submission_id UUID REFERENCES public.bid_submissions(id)
+        ON DELETE CASCADE,
+
+    vendor_id UUID NOT NULL REFERENCES public.vendors(id)
+        ON DELETE CASCADE,
+
+    original_filename TEXT NOT NULL,
+
+    storage_path TEXT,
+
+    mime_type TEXT,
+
+    file_size BIGINT,
+
+    document_type TEXT,
+
+    extracted_data JSONB,
+
+    processing_status TEXT DEFAULT 'UPLOADED'
+    CHECK (
+        processing_status IN (
+            'UPLOADED',
+            'PROCESSING',
+            'PROCESSED',
+            'FAILED'
+        )
+    ),
+
+    verification_status TEXT DEFAULT 'PENDING'
+    CHECK (
+        verification_status IN (
+            'PENDING',
+            'MATCHED',
+            'MISSING',
+            'REVIEW'
+        )
+    ),
+
+    verified_at TIMESTAMPTZ,
+
+    uploaded_by UUID REFERENCES public.user_profiles(id)
+        ON DELETE SET NULL,
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 COMMENT ON TABLE public.vendor_documents IS
-    'Uploaded bidder document metadata. Files in Supabase Storage bucket vendor-documents. document_type classification is Phase 7+.';
+'Uploaded bidder documents with Gemini OCR extraction.';
 
 -- ============================================================
 -- INDEXES
 -- ============================================================
-CREATE INDEX IF NOT EXISTS idx_tenders_status           ON public.tenders(status);
-CREATE INDEX IF NOT EXISTS idx_tenders_tender_number    ON public.tenders(tender_number);
-CREATE INDEX IF NOT EXISTS idx_bid_submissions_tender   ON public.bid_submissions(tender_id);
-CREATE INDEX IF NOT EXISTS idx_bid_submissions_vendor   ON public.bid_submissions(vendor_id);
-CREATE INDEX IF NOT EXISTS idx_vendor_docs_vendor       ON public.vendor_documents(vendor_id);
-CREATE INDEX IF NOT EXISTS idx_vendor_docs_bid          ON public.vendor_documents(bid_submission_id);
-CREATE INDEX IF NOT EXISTS idx_tender_docs_tender       ON public.tender_documents(tender_id);
+
+CREATE INDEX IF NOT EXISTS idx_tenders_status
+ON public.tenders(status);
+
+CREATE INDEX IF NOT EXISTS idx_tenders_number
+ON public.tenders(tender_number);
+
+CREATE INDEX IF NOT EXISTS idx_tenders_extraction_status
+ON public.tenders(extraction_status);
+
+CREATE INDEX IF NOT EXISTS idx_bid_tender
+ON public.bid_submissions(tender_id);
+
+CREATE INDEX IF NOT EXISTS idx_bid_vendor
+ON public.bid_submissions(vendor_id);
+
+CREATE INDEX IF NOT EXISTS idx_bid_ai_status
+ON public.bid_submissions(ai_verification_status);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_docs_vendor
+ON public.vendor_documents(vendor_id);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_docs_bid
+ON public.vendor_documents(bid_submission_id);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_docs_processing
+ON public.vendor_documents(processing_status);
+
+CREATE INDEX IF NOT EXISTS idx_tender_docs_tender
+ON public.tender_documents(tender_id);
 
 -- ============================================================
--- TRIGGERS: auto-update updated_at
+-- UPDATED_AT TRIGGER
 -- ============================================================
+
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
+    NEW.updated_at=NOW();
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER trg_user_profiles_updated_at
-    BEFORE UPDATE ON public.user_profiles
-    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS trg_user_profiles_updated_at ON public.user_profiles;
+CREATE TRIGGER trg_user_profiles_updated_at
+BEFORE UPDATE ON public.user_profiles
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE OR REPLACE TRIGGER trg_tenders_updated_at
-    BEFORE UPDATE ON public.tenders
-    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS trg_tenders_updated_at ON public.tenders;
+CREATE TRIGGER trg_tenders_updated_at
+BEFORE UPDATE ON public.tenders
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE OR REPLACE TRIGGER trg_vendors_updated_at
-    BEFORE UPDATE ON public.vendors
-    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS trg_vendors_updated_at ON public.vendors;
+CREATE TRIGGER trg_vendors_updated_at
+BEFORE UPDATE ON public.vendors
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE OR REPLACE TRIGGER trg_bid_submissions_updated_at
-    BEFORE UPDATE ON public.bid_submissions
-    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS trg_bid_updated_at ON public.bid_submissions;
+CREATE TRIGGER trg_bid_updated_at
+BEFORE UPDATE ON public.bid_submissions
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ============================================================
--- TRIGGER: auto-create user_profile on auth.users INSERT
--- When a user signs up via Supabase Auth, create a profile row.
--- Default role is BIDDER — officers must be manually assigned.
+-- AUTO CREATE USER PROFILE
 -- ============================================================
+
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.user_profiles (id, role, full_name)
-    VALUES (
-        NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'role', 'BIDDER'),
-        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email)
+
+    INSERT INTO public.user_profiles(
+        id,
+        role,
+        full_name
     )
-    ON CONFLICT (id) DO NOTHING;
+    VALUES(
+        NEW.id,
+        COALESCE(
+            NEW.raw_user_meta_data->>'role',
+            'BIDDER'
+        ),
+        COALESCE(
+            NEW.raw_user_meta_data->>'full_name',
+            NEW.email
+        )
+    )
+    ON CONFLICT(id) DO NOTHING;
+
     RETURN NEW;
+
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE TRIGGER trg_on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+DROP TRIGGER IF EXISTS trg_on_auth_user_created ON auth.users;
+
+CREATE TRIGGER trg_on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

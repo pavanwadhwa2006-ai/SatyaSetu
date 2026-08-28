@@ -9,7 +9,7 @@ export const complianceResults: ComplianceResult[] = [
   {
     bidderId: 'BIDDER-001',
     bidId: 'BID-DEMO-001',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     overallStatus: 'PASS',
     complianceScore: 96,
     totalRequirements: 13,
@@ -37,7 +37,7 @@ export const complianceResults: ComplianceResult[] = [
   {
     bidderId: 'BIDDER-002',
     bidId: 'BID-DEMO-002',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     overallStatus: 'FAIL',
     complianceScore: 72,
     totalRequirements: 13,
@@ -65,7 +65,7 @@ export const complianceResults: ComplianceResult[] = [
   {
     bidderId: 'BIDDER-003',
     bidId: 'BID-DEMO-003',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     overallStatus: 'REVIEW',
     complianceScore: 84,
     totalRequirements: 13,
@@ -93,7 +93,7 @@ export const complianceResults: ComplianceResult[] = [
   {
     bidderId: 'BIDDER-004',
     bidId: 'BID-DEMO-004',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     overallStatus: 'FAIL',
     complianceScore: 78,
     totalRequirements: 13,

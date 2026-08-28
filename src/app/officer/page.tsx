@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { fetchTenders } from "@/lib/mock-api";
+import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,100 +11,194 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  FileText, ClipboardCheck, AlertTriangle, BarChart3, ArrowRight,
+  FileText, ClipboardCheck, BarChart3, ArrowRight, Plus, Loader2, ShieldCheck
 } from "lucide-react";
 
-const stats = [
-  { label: "Active Tenders", value: "8", icon: FileText, color: "text-[#1e3a5f]", bg: "bg-[#1e3a5f]/10" },
-  { label: "Bids Received", value: "27", icon: ClipboardCheck, color: "text-emerald-700", bg: "bg-emerald-50" },
-  { label: "Pending Reviews", value: "6", icon: BarChart3, color: "text-amber-700", bg: "bg-amber-50" },
-  { label: "High Risk Bids", value: "3", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
-];
-
-const tenderRows = [
-  { id: "GEM-DEMO-2026-001", title: "Supply and Installation of Industrial Temperature Monitoring Equipment", bids: 4, status: "Pending Evaluation", deadline: "20 Sep 2026", isShowcase: true },
-  { id: "GEM-DEMO-2026-002", title: "Procurement of Network Security Appliances", bids: 6, status: "Under Review", deadline: "30 Sep 2026", isShowcase: false },
-  { id: "GEM-DEMO-2026-004", title: "Supply of Laboratory Chemical Reagents and Glassware", bids: 3, status: "Pending", deadline: "15 Sep 2026", isShowcase: false },
-  { id: "GEM-DEMO-2026-005", title: "Development of Citizen Grievance Portal", bids: 8, status: "Shortlisted", deadline: "05 Oct 2026", isShowcase: false },
-];
-
 export default function OfficerDashboard() {
+  const [tendersList, setTendersList] = useState<any[]>([]);
+  const [submissionsCount, setSubmissionsCount] = useState<number>(0);
+  const [pendingCount, setPendingCount] = useState<number>(0);
+  const [verifiedCount, setVerifiedCount] = useState<number>(0);
+  const [bidCountsMap, setBidCountsMap] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDashboardData() {
+      try {
+        const liveTenders = await fetchTenders();
+
+        // Fetch bid_submissions counts
+        const { data: bids } = await supabase.from("bid_submissions").select("id, tender_id, status, ai_verification_status");
+
+        if (isMounted) {
+          setTendersList(liveTenders);
+          if (bids) {
+            setSubmissionsCount(bids.length);
+            setPendingCount(bids.filter((b) => b.status === "UNDER_EVALUATION" || b.status === "SUBMITTED").length);
+            setVerifiedCount(bids.filter((b) => b.ai_verification_status === "VERIFIED").length);
+
+            const map: Record<string, number> = {};
+            bids.forEach((b) => {
+              if (b.tender_id) {
+                map[b.tender_id] = (map[b.tender_id] || 0) + 1;
+              }
+            });
+            setBidCountsMap(map);
+          }
+        }
+      } catch (err) {
+        console.warn("Officer dashboard data fetch warning:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadDashboardData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-lg sm:text-xl font-semibold text-[#1e3a5f]">Procurement Evaluation Dashboard</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Monitor tenders, evaluate bids, and manage procurement decisions</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg sm:text-xl font-semibold text-[#1e3a5f]">Procurement Evaluation Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Monitor tenders, evaluate bidder applications, and make automated AI procurement decisions
+          </p>
+        </div>
+        <Link href="/officer/tenders/publish">
+          <Button className="bg-[#1e3a5f] hover:bg-[#152a45] text-xs gap-1.5 self-start sm:self-auto">
+            <Plus className="h-4 w-4" /> Publish Tender
+          </Button>
+        </Link>
       </div>
 
-      {/* Stats Cards */}
+      {/* Live Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
-              <div className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
-                <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold leading-tight">{stat.value}</p>
-                <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <Card>
+          <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-[#1e3a5f]/10 text-[#1e3a5f]">
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold leading-tight">{tendersList.length}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground truncate">Active Tenders</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+              <ClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold leading-tight">{submissionsCount}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground truncate">Bids Received</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold leading-tight">{pendingCount}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground truncate">Pending Reviews</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+              <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold leading-tight">{verifiedCount}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground truncate">AI Verified Bids</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Tender Table */}
+      {/* Tender Evaluation Table */}
       <Card>
         <div className="p-3.5 sm:p-4 border-b flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold text-sm sm:text-base">Tender Evaluations</h2>
-          <Badge variant="outline" className="text-[10px] sm:text-xs">Prototype Tender Data</Badge>
+          <h2 className="font-semibold text-sm sm:text-base text-[#1e3a5f]">Live Tender Evaluations (`tenders`)</h2>
+          <Badge variant="outline" className="text-[10px] sm:text-xs bg-emerald-50 text-emerald-800 border-emerald-300">
+            Live Supabase Integration
+          </Badge>
         </div>
+
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[220px]">Tender</TableHead>
-                <TableHead className="w-[70px] sm:w-[80px]">Bids</TableHead>
-                <TableHead className="w-[120px] sm:w-[140px]">Evaluation Status</TableHead>
-                <TableHead className="w-[100px] sm:w-[110px]">Deadline</TableHead>
-                <TableHead className="w-[120px] sm:w-[140px]">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tenderRows.map((row) => (
-                <TableRow key={row.id} className={row.isShowcase ? "bg-blue-50/50" : ""}>
-                  <TableCell>
-                    <div className="min-w-0">
-                      <span className="text-xs font-mono text-muted-foreground font-medium">{row.id}</span>
-                      <p className="text-xs sm:text-sm font-medium leading-snug">{row.title}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-semibold text-xs">{row.bids}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
-                      {row.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{row.deadline}</TableCell>
-                  <TableCell>
-                    {row.isShowcase ? (
-                      <Link href={`/officer/tenders/${row.id}`}>
-                        <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1 text-xs whitespace-nowrap">
-                          Analyze Bids <ArrowRight className="h-3 w-3" />
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Button size="sm" variant="outline" disabled className="gap-1 text-xs whitespace-nowrap">
-                        View <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
+              <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f]" />
+              <span className="text-xs">Loading live tenders...</span>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[220px]">Tender</TableHead>
+                  <TableHead className="w-[80px]">Bids</TableHead>
+                  <TableHead className="w-[140px]">Tender Status</TableHead>
+                  <TableHead className="w-[120px]">Deadline</TableHead>
+                  <TableHead className="w-[140px]">Action</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {tendersList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-8">
+                      No active tenders published yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  tendersList.map((row) => {
+                    const bidsReceived = bidCountsMap[row.id] || 0;
+                    return (
+                      <TableRow key={row.id}>
+                        <TableCell>
+                          <div className="min-w-0">
+                            <span className="text-xs font-mono text-muted-foreground font-medium">{row.id}</span>
+                            <p className="text-xs sm:text-sm font-medium leading-snug">{row.title}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-semibold text-xs bg-blue-50 text-[#1e3a5f]">
+                            {bidsReceived}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[11px] bg-emerald-50 text-emerald-700 border-emerald-200 whitespace-nowrap font-medium">
+                            {row.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {row.submissionDeadline ? new Date(row.submissionDeadline).toLocaleDateString('en-IN') : "2026-09-30"}
+                        </TableCell>
+                        <TableCell>
+                          <Link href={`/officer/tenders/${row.id}`}>
+                            <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1 text-xs whitespace-nowrap">
+                              Analyze Bids <ArrowRight className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </Card>
     </div>

@@ -15,13 +15,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { uploadVendorDocument } from "@/lib/mock-api";
+
 const STEPS = ["Company", "Technical", "Commercial", "Documents", "Review"];
 
 const documentTypes = [
-  "PAN Certificate", "GST Certificate", "Udyam Certificate", "Company Registration",
-  "Turnover Certificate", "Experience Certificate", "OEM Authorization",
-  "Technical Compliance Sheet", "Product Datasheet", "Warranty Declaration",
-  "Delivery Undertaking", "MII Declaration",
+  "Company Profile", "PAN Card", "GST Certificate", "CA Turnover Certificate",
+  "Work Order", "Completion Certificate", "Technical Compliance Declaration",
+  "Udyam Certificate", "Company Registration", "OEM Authorization",
+  "Product Datasheet", "Warranty Declaration", "Delivery Undertaking", "MII Declaration",
 ];
 
 export default function BidSubmissionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -53,12 +55,29 @@ export default function BidSubmissionPage({ params }: { params: Promise<{ id: st
 
   if (!tender) return <div className="p-6">Tender not found.</div>;
 
-  const handleUpload = (docType: string) => {
+  const handleUpload = async (docType: string, file?: File) => {
     setUploading(docType);
-    setTimeout(() => {
+    try {
+      if (file) {
+        await uploadVendorDocument({
+          vendorId: "BIDDER-001",
+          file,
+          documentType: docType,
+        });
+      } else {
+        const dummyFile = new File(["Dummy PDF Content for " + docType], `${docType.replace(/\s+/g, '_')}.pdf`, { type: 'application/pdf' });
+        await uploadVendorDocument({
+          vendorId: "BIDDER-001",
+          file: dummyFile,
+          documentType: docType,
+        });
+      }
       setUploadedDocs((prev) => new Set(prev).add(docType));
+    } catch (err) {
+      console.warn("Upload failed:", err);
+    } finally {
       setUploading(null);
-    }, 800);
+    }
   };
 
   const handleSubmit = () => {

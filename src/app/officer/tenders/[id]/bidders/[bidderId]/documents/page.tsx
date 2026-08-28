@@ -1,11 +1,11 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { getBidderById } from "@/data/bidders";
-import { getDocumentsByBidder } from "@/data/documents";
+import { fetchBidderById, fetchDocumentsByBidder, uploadVendorDocument } from "@/lib/mock-api";
 import { getVerificationsByBidder } from "@/data/verification";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/compliance/status-badge";
@@ -17,17 +17,63 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
-  FileSearch, AlertTriangle, Brain,
+  FileSearch, AlertTriangle, Brain, Upload, CheckCircle2, Loader2, FileText,
 } from "lucide-react";
-import { BidDocument, VerificationRecord } from "@/types";
+import { Bidder, BidDocument, VerificationRecord } from "@/types";
 import { PreviousButton } from "@/components/shared/previous-button";
+
+const REQUIRED_CHECKLIST = [
+  "Company Profile",
+  "PAN Card",
+  "GST Certificate",
+  "CA Turnover Certificate",
+  "Work Order",
+  "Completion Certificate",
+  "Technical Compliance Declaration",
+];
 
 export default function DocumentVerificationPage({ params }: { params: Promise<{ id: string; bidderId: string }> }) {
   const { id, bidderId } = use(params);
-  const bidder = getBidderById(bidderId);
-  const documents = getDocumentsByBidder(bidderId);
-  const verifications = getVerificationsByBidder(bidderId);
+  const [bidder, setBidder] = useState<Bidder | null>(null);
+  const [documents, setDocuments] = useState<BidDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploadingItem, setUploadingItem] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<BidDocument | null>(null);
+
+  const verifications = getVerificationsByBidder(bidderId);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([fetchBidderById(bidderId), fetchDocumentsByBidder(bidderId)]).then(([b, docs]) => {
+      if (isMounted) {
+        setBidder(b || getBidderById(bidderId) || null);
+        setDocuments(docs);
+        setLoading(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [bidderId]);
+
+  const handleFileUpload = async (docType: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingItem(docType);
+    try {
+      await uploadVendorDocument({
+        vendorId: bidderId,
+        file,
+        documentType: docType,
+      });
+      const updatedDocs = await fetchDocumentsByBidder(bidderId);
+      setDocuments(updatedDocs);
+    } catch (err) {
+      console.warn("Upload error:", err);
+    } finally {
+      setUploadingItem(null);
+    }
+  };
 
   if (!bidder) return <div className="p-6">Bidder not found.</div>;
 
@@ -67,6 +113,49 @@ export default function DocumentVerificationPage({ params }: { params: Promise<{
           <span className="text-xs text-muted-foreground">AI Document Analysis</span>
         </div>
       </div>
+
+      {/* Document Checklist & PDF Uploader */}
+      <Card className="p-4 sm:p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-sm sm:text-base">Required Tender Document Checklist</h2>
+          <Badge variant="outline" className="text-[10px]">Storage: vendor-documents</Badge>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {REQUIRED_CHECKLIST.map((item) => {
+            const uploaded = documents.some((d) => d.typeName === item || d.type === item);
+            const isUploading = uploadingItem === item;
+            return (
+              <div key={item} className="flex items-center justify-between p-2.5 rounded-md border bg-card text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-[#1e3a5f]" />
+                  <span className="font-medium truncate">{item}</span>
+                </div>
+                <div>
+                  {uploaded ? (
+                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Uploaded
+                    </Badge>
+                  ) : isUploading ? (
+                    <Badge variant="outline" className="text-[10px] gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Uploading...
+                    </Badge>
+                  ) : (
+                    <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#1e3a5f] text-white text-[11px] hover:bg-[#152a45] transition-colors font-medium">
+                      <Upload className="h-3 w-3" /> Upload PDF
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(item, e)}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
       {/* Document Table */}
       <Card>

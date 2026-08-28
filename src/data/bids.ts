@@ -8,7 +8,7 @@ import { bidders } from './bidders';
 export const bids: Bid[] = [
   {
     id: 'BID-DEMO-001',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     bidderId: 'BIDDER-001',
     bidder: bidders[0],
     status: 'UNDER_EVALUATION',
@@ -38,7 +38,7 @@ export const bids: Bid[] = [
   },
   {
     id: 'BID-DEMO-002',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     bidderId: 'BIDDER-002',
     bidder: bidders[1],
     status: 'UNDER_EVALUATION',
@@ -69,7 +69,7 @@ export const bids: Bid[] = [
   },
   {
     id: 'BID-DEMO-003',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     bidderId: 'BIDDER-003',
     bidder: bidders[2],
     status: 'UNDER_EVALUATION',
@@ -100,7 +100,7 @@ export const bids: Bid[] = [
   },
   {
     id: 'BID-DEMO-004',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     bidderId: 'BIDDER-004',
     bidder: bidders[3],
     status: 'UNDER_EVALUATION',

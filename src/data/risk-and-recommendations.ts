@@ -72,7 +72,7 @@ export const aiRecommendations: AIRecommendation[] = [
   {
     bidderId: 'BIDDER-001',
     bidId: 'BID-DEMO-001',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     recommendation: 'QUALIFY',
     recommendationLabel: 'Recommend Qualification',
     reasonSummary: [
@@ -96,7 +96,7 @@ export const aiRecommendations: AIRecommendation[] = [
   {
     bidderId: 'BIDDER-002',
     bidId: 'BID-DEMO-002',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     recommendation: 'DISQUALIFY',
     recommendationLabel: 'Recommend Disqualification',
     reasonSummary: [
@@ -115,7 +115,7 @@ export const aiRecommendations: AIRecommendation[] = [
   {
     bidderId: 'BIDDER-003',
     bidId: 'BID-DEMO-003',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     recommendation: 'REVIEW_BEFORE_DECISION',
     recommendationLabel: 'Review Before Final Decision',
     reasonSummary: [
@@ -137,7 +137,7 @@ export const aiRecommendations: AIRecommendation[] = [
   {
     bidderId: 'BIDDER-004',
     bidId: 'BID-DEMO-004',
-    tenderId: 'GEM-DEMO-2026-001',
+    tenderId: 'GEM/2026/B/7903799',
     recommendation: 'DISQUALIFY',
     recommendationLabel: 'Recommend Disqualification',
     reasonSummary: [

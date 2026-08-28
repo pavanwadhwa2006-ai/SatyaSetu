@@ -7,7 +7,7 @@ import { Tender } from '@/types';
 
 export const tenders: Tender[] = [
   {
-    id: 'GEM-DEMO-2026-001',
+    id: 'GEM/2026/B/7903799',
     title: 'Supply and Installation of Industrial Temperature Monitoring Equipment',
     organization: 'Government Procurement Department',
     department: 'Central Instrumentation Division',
@@ -43,7 +43,7 @@ export const tenders: Tender[] = [
     ],
   },
   {
-    id: 'GEM-DEMO-2026-002',
+    id: 'GEM/2026/B/7878577',
     title: 'Procurement of Network Security Appliances',
     organization: 'National Information Technology Board',
     department: 'Cybersecurity Division',
@@ -71,7 +71,7 @@ export const tenders: Tender[] = [
     ],
   },
   {
-    id: 'GEM-DEMO-2026-003',
+    id: 'GEM/2026/B/7676747',
     title: 'Annual Maintenance Contract for HVAC Systems',
     organization: 'Public Works Department',
     department: 'Building Maintenance Division',
@@ -96,7 +96,7 @@ export const tenders: Tender[] = [
     ],
   },
   {
-    id: 'GEM-DEMO-2026-004',
+    id: 'GEM/2026/B/7261466',
     title: 'Supply of Laboratory Chemical Reagents and Glassware',
     organization: 'Council of Scientific and Industrial Research',
     department: 'Central Procurement Cell',
@@ -121,7 +121,7 @@ export const tenders: Tender[] = [
     ],
   },
   {
-    id: 'GEM-DEMO-2026-005',
+    id: 'GEM/2026/B/7364888',
     title: 'Development of Citizen Grievance Portal',
     organization: 'Department of Administrative Reforms',
     department: 'e-Governance Division',

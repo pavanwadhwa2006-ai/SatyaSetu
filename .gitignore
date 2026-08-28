@@ -46,6 +46,12 @@ backend/**/.pytest_cache/
 backend/htmlcov/
 backend/.coverage
 backend/dist/
+backend/pyrightconfig.json
+
+# scratch & temporary files
+scratch/
+.vscode/
+pyrightconfig.json
 
 # vercel
 .vercel

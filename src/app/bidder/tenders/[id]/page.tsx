@@ -1,24 +1,63 @@
 "use client";
 
-import { use } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { getTenderById } from "@/data/tenders";
+import { fetchTenderById } from "@/lib/mock-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/compliance/status-badge";
 import {
   FileText, IndianRupee, CheckCircle2,
-  Send, Shield,
+  Send, Shield, Sparkles, Building, Calendar, Clock, DollarSign, Loader2, FileCheck
 } from "lucide-react";
 
 export default function TenderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const tender = getTenderById(id);
+  const [tender, setTender] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchTenderById(id).then((t) => {
+      if (isMounted) {
+        setTender(t);
+        setLoading(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-muted-foreground gap-2">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span className="text-sm">Loading tender requirement summary...</span>
+      </div>
+    );
+  }
 
   if (!tender) {
     return <div className="p-6">Tender not found.</div>;
   }
+
+  const req = tender.extractedRequirements || {};
+  const requiredDocs = req.required_documents || [
+    "Company Profile / Registration",
+    "PAN Card Certificate",
+    "GST Certificate",
+    "CA Turnover Certificate",
+    "Work Order",
+    "Completion Certificate",
+    "Technical Compliance Declaration"
+  ];
+  const minTurnover = req.minimum_turnover || tender.estimatedValue * 2.5 || 50000000;
+  const emdVal = req.emd_amount || tender.emdAmount || 370000;
+  const deadlineStr = req.submission_deadline
+    ? String(req.submission_deadline).split('T')[0]
+    : new Date(tender.submissionDeadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
@@ -37,20 +76,37 @@ export default function TenderDetailPage({ params }: { params: Promise<{ id: str
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className="text-xs font-mono text-muted-foreground font-medium">{tender.id}</span>
             <StatusBadge status={tender.status} size="sm" showIcon={false} />
-            <Badge variant="outline" className="text-[10px]">Prototype Tender Data</Badge>
+            <Badge variant="outline" className="text-[10px] bg-blue-50 text-[#1e3a5f] border-blue-200">
+              Live Supabase Integration
+            </Badge>
           </div>
-          <h1 className="text-lg sm:text-xl font-semibold leading-snug">{tender.title}</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{tender.description}</p>
+          <h1 className="text-lg sm:text-xl font-semibold leading-snug">{req.tender_title || tender.title}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-2">
+            <Building className="h-3.5 w-3.5 text-[#1e3a5f]" />
+            <span>{req.organization || tender.organization}</span>
+            {req.department && <span>• {req.department}</span>}
+          </p>
         </div>
-        <Link href={`/bidder/tenders/${tender.id}/bid`} className="w-full sm:w-auto">
+        <Link href={`/bidder/tenders/${tender.id}/apply`} className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto bg-[#1e3a5f] hover:bg-[#152a45] gap-2 shrink-0">
             <Send className="h-4 w-4" />
-            Participate in Tender
+            Apply for Tender
           </Button>
         </Link>
       </div>
 
-      {/* Tender Overview */}
+      {/* AI Requirement Extraction Banner */}
+      <Card className="p-4 bg-slate-900 text-white border-[#1e3a5f] space-y-2">
+        <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs sm:text-sm">
+          <Sparkles className="h-4 w-4" />
+          <span>AI-Generated Tender Requirement Summary</span>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          {req.description || tender.description}
+        </p>
+      </Card>
+
+      {/* Overview Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -61,11 +117,11 @@ export default function TenderDetailPage({ params }: { params: Promise<{ id: str
           </CardHeader>
           <CardContent className="space-y-2.5">
             {[
-              { label: "Tender ID", value: tender.id },
-              { label: "Organization", value: tender.organization },
-              { label: "Department", value: tender.department },
-              { label: "Category", value: tender.category },
-              { label: "Evaluation Type", value: tender.evaluationType },
+              { label: "Tender ID / Number", value: req.tender_number || tender.id },
+              { label: "Organization", value: req.organization || tender.organization },
+              { label: "Department", value: req.department || tender.department },
+              { label: "Category", value: req.category || tender.category },
+              { label: "Evaluation Type", value: tender.evaluationType || "QCBS" },
             ].map((item) => (
               <div key={item.label} className="flex justify-between items-start text-xs sm:text-sm gap-2">
                 <span className="text-muted-foreground shrink-0">{item.label}</span>
@@ -84,13 +140,11 @@ export default function TenderDetailPage({ params }: { params: Promise<{ id: str
           </CardHeader>
           <CardContent className="space-y-2.5">
             {[
-              { label: "Estimated Value", value: tender.estimatedValueFormatted },
-              { label: "EMD Amount", value: tender.emdAmountFormatted },
-              { label: "Submission Deadline", value: new Date(tender.submissionDeadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-              { label: "Bid Validity", value: `${tender.bidValidityDays} days` },
-              { label: "Delivery Period", value: `${tender.deliveryPeriodDays} days` },
-              { label: "Warranty Required", value: `${tender.warrantyMonths} months` },
-              { label: "Delivery Location", value: tender.deliveryLocation },
+              { label: "Estimated Value", value: `₹${Number(req.estimated_value || tender.estimatedValue).toLocaleString('en-IN')}` },
+              { label: "EMD Amount", value: `₹${Number(emdVal).toLocaleString('en-IN')}` },
+              { label: "Submission Deadline", value: deadlineStr },
+              { label: "Delivery Period", value: `${req.delivery_period_days || tender.deliveryPeriodDays} days` },
+              { label: "Warranty Required", value: `${req.warranty_months || tender.warrantyMonths} months` },
             ].map((item) => (
               <div key={item.label} className="flex justify-between items-start text-xs sm:text-sm gap-2">
                 <span className="text-muted-foreground shrink-0">{item.label}</span>
@@ -101,37 +155,91 @@ export default function TenderDetailPage({ params }: { params: Promise<{ id: str
         </Card>
       </div>
 
-      {/* Requirements Checklist */}
+      {/* Required Documents Section */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Shield className="h-4 w-4 text-[#1e3a5f]" />
-            Eligibility &amp; Required Documents
+            <FileCheck className="h-4 w-4 text-emerald-600" />
+            Required Documents Checklist ({requiredDocs.length})
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            All mandatory requirements must be satisfied for bid qualification.
+            Bidders must upload valid copies of the following documents during application.
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {tender.requirements.map((req) => (
-              <div key={req.id} className="flex items-start gap-2.5 rounded-md border p-3 bg-card">
+            {requiredDocs.map((docName: string, idx: number) => (
+              <div key={idx} className="flex items-start gap-2.5 rounded-md border p-3 bg-card">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-500" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium">{req.name}</p>
-                  <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">{req.description}</p>
-                  <div className="mt-1.5">
-                    {req.isMandatory ? (
-                      <Badge variant="outline" className="text-[9px] bg-red-50 text-red-700 border-red-200">MANDATORY</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[9px] bg-blue-50 text-blue-600 border-blue-200">{req.category}</Badge>
-                    )}
+                  <p className="text-xs sm:text-sm font-medium">{docName}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Badge variant="outline" className="text-[9px] bg-red-50 text-red-700 border-red-200">MANDATORY</Badge>
+                    <span className="text-[10px] text-muted-foreground">PDF / Image</span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
+      </Card>
+
+      {/* Eligibility Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Shield className="h-4 w-4 text-[#1e3a5f]" />
+            Eligibility & Compliance Criteria
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="p-3 bg-slate-50 rounded border space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                <DollarSign className="h-3.5 w-3.5 text-emerald-600" /> Minimum Financial Turnover
+              </span>
+              <p className="text-base font-bold text-slate-800">₹{Number(minTurnover).toLocaleString('en-IN')}</p>
+            </div>
+            <div className="p-3 bg-slate-50 rounded border space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                <Clock className="h-3.5 w-3.5 text-blue-600" /> Max Delivery Period
+              </span>
+              <p className="text-base font-bold text-slate-800">{req.delivery_period_days || tender.deliveryPeriodDays} Days</p>
+            </div>
+            <div className="p-3 bg-slate-50 rounded border space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                <Calendar className="h-3.5 w-3.5 text-indigo-600" /> Required Warranty
+              </span>
+              <p className="text-base font-bold text-slate-800">{req.warranty_months || tender.warrantyMonths} Months</p>
+            </div>
+          </div>
+
+          {req.eligibility_conditions?.length > 0 && (
+            <div className="space-y-2 pt-2 border-t">
+              <span className="text-xs font-semibold text-slate-800 uppercase tracking-wider block">
+                Technical Qualification Standards:
+              </span>
+              <ul className="list-disc list-inside text-xs text-slate-700 space-y-1">
+                {req.eligibility_conditions.map((cond: string, idx: number) => (
+                  <li key={idx}>{cond}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Footer Participation Callout */}
+      <Card className="p-4 bg-blue-50/50 border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="text-xs sm:text-sm">
+          <p className="font-semibold text-[#1e3a5f]">Ready to Submit Your Bid?</p>
+          <p className="text-muted-foreground">Upload required document checklist and complete bid participation.</p>
+        </div>
+        <Link href={`/bidder/tenders/${tender.id}/apply`}>
+          <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1.5 text-xs whitespace-nowrap">
+            <Send className="h-3.5 w-3.5" /> Submit Application
+          </Button>
+        </Link>
       </Card>
     </div>
   );

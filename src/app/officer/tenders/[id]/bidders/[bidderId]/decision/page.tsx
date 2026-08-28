@@ -34,8 +34,29 @@ export default function FinalDecisionPage({ params }: { params: Promise<{ id: st
 
   if (!bidder || !compliance || !risk || !rec) return <div className="p-6">Not found.</div>;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!selectedDecision) return;
+    
+    // Map decision to database status string
+    const dbStatus = selectedDecision === "APPROVE" ? "QUALIFIED" : selectedDecision === "REJECT" ? "DISQUALIFIED" : "CLARIFICATION_REQUESTED";
+
+    // 1. Call Backend Officer Decision API
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      await fetch(`${apiUrl}/api/analysis/officer-decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bid_submission_id: bidderId,
+          decision: dbStatus,
+          notes: remarks,
+        }),
+      });
+    } catch (err) {
+      console.warn("Officer decision API call warning:", err);
+    }
+
+    // 2. Evaluation context update
     makeDecision(bidderId, {
       bidderId,
       bidId: compliance.bidId,
@@ -46,6 +67,7 @@ export default function FinalDecisionPage({ params }: { params: Promise<{ id: st
       decidedBy: "Ananya Mehta, Senior Procurement Officer",
       decidedAt: new Date().toISOString(),
     });
+
     setConfirmed(true);
   };
 
