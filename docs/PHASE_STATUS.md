@@ -9,6 +9,7 @@
 | 5 Tender Intelligence   | DONE        | TBD   | Machine-readable requirement models        |
 | 6 Bidder Submission     | DONE        | TBD   | Real uploads and persistence               |
 | 7 Document Intelligence | DONE        | TBD   | OCR/classification/fact extraction         |
+| 7.1 Frontend Integration| DONE        | TBD   | Connected entire frontend to live APIs     |
 | 8 Evidence Layer        | NOT STARTED | TBD   | Page/source traceability                   |
 | 9 Mock Verification     | NOT STARTED | TBD   | Adapter-based mock services                |
 | 10 Cross-Document       | NOT STARTED | TBD   | Conflict detection                         |
@@ -24,11 +25,11 @@
 
 ## Current Phase
 
-Phase 7 — Document Intelligence
+Phase 7.1 — Complete Frontend Data Integration
 
 Status: DONE
 
-Phase 7 has been implemented and verified, establishing the Document Intelligence layer that ingests uploaded bidder PDFs from Supabase Storage and extracts structured facts, numeric normalizations, source page numbers, and verbatim quotations across all 5 canonical bidder packages.
+Phase 7.1 has been completed and verified. All static mock datasets (`GEM-DEMO-2026-001`, hardcoded tenderRows, mock stats) have been removed from the frontend application flows. The Next.js frontend is now 100% connected to live FastAPI backend APIs and Supabase database endpoints via a centralized `src/lib/api-client.ts` layer. Every page handles dynamic data loading, honest empty states, and descriptive error banners without silent fake fallbacks.
 
 ## Phase 7 Completed
 

@@ -17,6 +17,7 @@ Satyaseetu is an AI-powered integrated bid compliance verification platform for 
 | **Phase 5** | Tender Intelligence | **DONE** | Machine-readable requirement model, field normalization, percentage bases, exemption rules |
 | **Phase 6** | Bidder Submission | **DONE** | End-to-end frontend → FastAPI → Supabase workflow, multi-document PDF uploads & storage |
 | **Phase 7** | Document Intelligence | **DONE** | PDF parsing, classification, fact extraction, numeric normalization, page & quote provenance |
+| **Phase 7.1** | Frontend Integration | **DONE** | Complete removal of static frontend mock data; 100% connected to live FastAPI & Supabase |
 | **Phase 8** | Evidence Layer | **NOT STARTED** | Page/source traceability linking facts to evaluation criteria |
 | **Phase 9–19** | Future Phases | **NOT STARTED** | Mock verification, cross-document, rules engine, compliance, risk, officer dashboard |
 
