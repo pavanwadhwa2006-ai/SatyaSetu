@@ -7,7 +7,7 @@
 | 3 Ground Truth          | DONE        | TBD   | 3 tenders, 5 bidders, canonical benchmarks |
 | 4 Synthetic Documents   | DONE        | TBD   | 36 watermarked realistic bidder PDFs       |
 | 5 Tender Intelligence   | DONE        | TBD   | Machine-readable requirement models        |
-| 6 Bidder Submission     | NOT STARTED | TBD   | Real uploads and persistence               |
+| 6 Bidder Submission     | DONE        | TBD   | Real uploads and persistence               |
 | 7 Document Intelligence | NOT STARTED | TBD   | OCR/classification/extraction              |
 | 8 Evidence Layer        | NOT STARTED | TBD   | Page/source traceability                   |
 | 9 Mock Verification     | NOT STARTED | TBD   | Adapter-based mock services                |
@@ -24,59 +24,57 @@
 
 ## Current Phase
 
-Phase 5 — Tender Intelligence
+Phase 6 — Bidder Submission
 
 Status: DONE
 
-Phase 5 has been implemented and verified, establishing structured machine-readable requirements with normalized numeric values, percentage-based criteria, exemption metadata, and evidence requirements.
+Phase 6 has been implemented and verified, establishing the end-to-end Bidder Submission workflow linking Next.js frontend, FastAPI backend endpoints, Supabase database tables (`bid_submissions`, `vendor_documents`), and Supabase Storage.
 
-## Phase 5 Completed
+## Phase 6 Completed
 
-* Structured 34 canonical tender requirements into machine-readable format across 3 active tenders:
-  - `tender-t1` (MNIT Structural Software): 10 requirements
-  - `tender-t2` (ALIMCO Chair Assemblies): 14 requirements
-  - `tender-t3` (Trade Marks Registry Electrical): 10 requirements
-* Standardized requirement types: `FINANCIAL`, `EXPERIENCE`, `TECHNICAL`, `STATUTORY`, `DOCUMENT`, `VALIDITY`, `LOCATION`, `QUANTITY`, `OEM`, `MII`, `MSE`, `STARTUP`, `EMD`, `DELIVERY`, etc.
-* Standardized operators: `>=`, `<=`, `==`, `VALID`, `MATCH`, `PERCENT_OF`, `EXISTS`, etc.
-* Numerical values normalized (e.g. ₹5.00L -> 500000 INR, ₹34.00L -> 3400000 INR, 15% -> 0.15, 10% -> 0.10).
-* Percentage requirements preserve base relationships (`tender.estimatedValue`, `tender.totalQuantity`).
-* Structured exemption metadata representing qualifying entities, evidence requirements, and conditions.
-* Documented evidence requirements for each rule (`TURNOVER_CERTIFICATE`, `MAF`, `CRAC_CERTIFICATE`, `UDYAM_CERTIFICATE`, `NOTARIZED_AFFIDAVIT`, `ELECTRICAL_LICENSE`, etc.).
-* Exact source traceability preserved (`sourceDocument`, `sourcePage`, `sourceClause`).
-* Created backend schemas: `backend/app/schemas/tender_intelligence.py`.
-* Created backend API router: `backend/app/api/tender_intelligence.py` (`/api/tender-intelligence/requirements`, `/{tender_id}/requirements`, `/{tender_id}/summary`).
-* Added frontend Tender Intelligence explorer tab in `/officer/ground-truth`.
-* Created test suite: `backend/tests/test_tender_intelligence.py` (all 26 backend tests passing).
-* Next.js static build verified with 0 errors.
+* Bidder tender catalog (`/bidder/tenders`) backed by live FastAPI backend endpoint `GET /api/tenders`.
+* Dynamic tender overview (`/bidder/tenders/[id]`) with "Start Bid Submission" action.
+* Interactive Bid Submission Workspace (`/bidder/tenders/[id]/bid`):
+  - Draft initialization and resumption via `POST /api/bid-submissions`.
+  - Bidder identity switching across canonical benchmark vendors.
+  - Multi-document PDF uploader with document type tagging.
+  - Storage persistence via Supabase Storage bucket `vendor-documents` and mirror cache.
+  - Uploaded document list with inline download links and deletion actions (DRAFT state only).
+  - Submit / Finalize action (`POST /api/bid-submissions/{id}/submit`) transitioning status to `SUBMITTED`.
+  - Modification locks on submitted bids.
+* "My Bids" dashboard (`/bidder/bids`) tracking live vendor submissions.
+* Created backend schemas: `backend/app/schemas/bid_submission.py`.
+* Created storage service: `backend/app/services/storage_service.py`.
+* Created repositories: `backend/app/repositories/bid_submission_repo.py` and `backend/app/repositories/vendor_document_repo.py`.
+* Created API router: `backend/app/api/bid_submissions.py`.
+* Created frontend API client: `src/lib/api-client.ts`.
+* Created test suite: `backend/tests/test_bid_submissions.py`.
+* All 31 backend tests passing (100%).
+* Next.js production build passing with 0 errors.
 
-## Phase 5 Verification
+## Phase 6 Verification
 
-* `tests/test_tender_intelligence.py::test_all_structured_requirements_count` — PASS
-* `tests/test_tender_intelligence.py::test_three_active_tenders_requirements` — PASS
-* `tests/test_tender_intelligence.py::test_lookup_by_gem_bid_number` — PASS
-* `tests/test_tender_intelligence.py::test_numeric_normalization_accuracy` — PASS
-* `tests/test_tender_intelligence.py::test_percentage_based_requirements_and_bases` — PASS
-* `tests/test_tender_intelligence.py::test_exemption_metadata_structure` — PASS
-* `tests/test_tender_intelligence.py::test_evidence_requirements_presence` — PASS
-* `tests/test_tender_intelligence.py::test_source_traceability_preserved` — PASS
-* `tests/test_tender_intelligence.py::test_tender_summary_endpoint` — PASS
-* `tests/test_tender_intelligence.py::test_phase3_endpoints_compatibility` — PASS
-* Pytest test suite: 26/26 PASS
+* `tests/test_bid_submissions.py::test_create_and_get_draft_submission` — PASS
+* `tests/test_bid_submissions.py::test_submission_lifecycle_and_document_upload` — PASS
+* `tests/test_bid_submissions.py::test_reject_invalid_file_type` — PASS
+* `tests/test_bid_submissions.py::test_reject_empty_bid_submit` — PASS
+* `tests/test_bid_submissions.py::test_canonical_tenders_and_vendors_association` — PASS
+* Existing Phase 1–5 backend tests (26 tests) — ALL PASS
 * Next.js Build (`npm run build`): PASS
 
 ## Important Development State
 
-Phases 1, 2, 3, 4, and 5 are CLOSED.
+Phases 1, 2, 3, 4, 5, and 6 are CLOSED.
 
 The next active development phase is:
 
-Phase 6 — Bidder Submission
+Phase 7 — Document Intelligence
 
-Phase 6 has NOT started yet.
+Phase 7 has NOT started yet.
 
 ## Next Objective
 
-Implement vendor bid submission workflows, multi-document file uploads, and Supabase database persistence.
+Implement OCR, document classification, and structured fact extraction for uploaded vendor PDFs.
 
 ## Definition of Done
 

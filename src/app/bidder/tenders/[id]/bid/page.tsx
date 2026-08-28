@@ -1,250 +1,464 @@
 "use client";
 
-import { use, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getTenderById } from "@/data/tenders";
-import { Card, CardContent } from "@/components/ui/card";
+import { use, useEffect, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   FileText, Upload, CheckCircle2,
-  ArrowLeft, ArrowRight, Send, Loader2,
+  ArrowLeft, Send, Loader2, Trash2,
+  Lock, AlertTriangle, Download, Building2,
 } from "lucide-react";
-import Link from "next/link";
+import {
+  fetchBackendTenderById,
+  createOrResumeBidSubmission,
+  fetchBidSubmissionById,
+  uploadBidDocument,
+  deleteBidDocument,
+  finalizeBidSubmission,
+  StoredBidSubmission,
+  StoredVendorDocument,
+} from "@/lib/api-client";
+import { groundTruthBidders, groundTruthTenders } from "@/data/ground-truth";
 
-const STEPS = ["Company", "Technical", "Commercial", "Documents", "Review"];
-
-const documentTypes = [
-  "PAN Certificate", "GST Certificate", "Udyam Certificate", "Company Registration",
-  "Turnover Certificate", "Experience Certificate", "OEM Authorization",
-  "Technical Compliance Sheet", "Product Datasheet", "Warranty Declaration",
-  "Delivery Undertaking", "MII Declaration",
+const CANONICAL_DOC_TYPES = [
+  { value: "TURNOVER_CERTIFICATE", label: "CA Audited Turnover Certificate" },
+  { value: "MAF", label: "Manufacturer Authorization Form (MAF)" },
+  { value: "PURCHASE_ORDER", label: "Past Work Order / Purchase Order" },
+  { value: "CRAC_CERTIFICATE", label: "CRAC / Client Acceptance Certificate" },
+  { value: "UDYAM_CERTIFICATE", label: "Udyam / MSME Registration Certificate" },
+  { value: "DPIIT_RECOGNITION_CERT", label: "DPIIT Startup Recognition Certificate" },
+  { value: "ELECTRICAL_LICENSE", label: "Class-A Electrical Contractor License" },
+  { value: "MII_DECLARATION", label: "Make in India (MII) Local Content Declaration" },
+  { value: "NOTARIZED_AFFIDAVIT", label: "Notarized Non-Blacklisting Affidavit" },
+  { value: "BANK_SOLVENCY_CERT", label: "Bank Solvency Certificate" },
+  { value: "GSTR3B_RETURN", label: "GSTR-3B Tax Filing Return" },
+  { value: "TECHNICAL_PROPOSAL", label: "Technical Specifications & Delivery Proposal" },
+  { value: "OTHER", label: "Other Supporting Document" },
 ];
 
-export default function BidSubmissionPage({ params }: { params: Promise<{ id: string }> }) {
+export default function BidSubmissionWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const tender = getTenderById(id);
   const router = useRouter();
-  const [step, setStep] = useState(0);
-  const [uploading, setUploading] = useState<string | null>(null);
-  const [uploadedDocs, setUploadedDocs] = useState<Set<string>>(new Set());
+  const searchParams = useSearchParams();
+  const decodedTenderId = decodeURIComponent(id);
+
+  const [tender, setTender] = useState<any>(null);
+  const [submission, setSubmission] = useState<StoredBidSubmission | null>(null);
+  const [selectedVendorCode, setSelectedVendorCode] = useState<string>("T2-B1");
+  const [selectedDocType, setSelectedDocType] = useState<string>("TURNOVER_CERTIFICATE");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
-    legalName: "ABC Engineering Pvt. Ltd.",
-    pan: "AABCA1234B",
-    gstin: "07AABCA1234B1ZP",
-    udyam: "UDYAM-DL-07-0012345",
-    regNumber: "U29100DL2010PTC123456",
-    address: "42, Industrial Area Phase II, Okhla",
-    state: "Delhi",
-    representative: "Rajesh Kumar Sharma",
-    productModel: "ThermoTrack Pro X500",
-    specifications: "Industrial RTD sensors, -200°C to +850°C, ±0.1°C accuracy, IP67 rated",
-    deliveryPeriod: "90",
-    warranty: "36",
-    experience: "14 years with 45+ completed projects for NTPC, BHEL, IOCL, SAIL",
-    quotedAmount: "15400000",
-    taxPercentage: "18",
-  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!tender) return <div className="p-6">Tender not found.</div>;
+  // Load tender and active submission
+  useEffect(() => {
+    async function initWorkspace() {
+      setLoading(true);
+      setErrorMessage(null);
 
-  const handleUpload = (docType: string) => {
-    setUploading(docType);
-    setTimeout(() => {
-      setUploadedDocs((prev) => new Set(prev).add(docType));
-      setUploading(null);
-    }, 800);
+      try {
+        // 1. Resolve tender details
+        let tData = null;
+        try {
+          tData = await fetchBackendTenderById(decodedTenderId);
+        } catch {
+          tData = groundTruthTenders.find(
+            (t) => t.id === decodedTenderId || t.bidNumber === decodedTenderId
+          );
+        }
+        setTender(tData);
+
+        // 2. Resolve or load existing submission
+        const existingSubId = searchParams.get("submission_id");
+        if (existingSubId) {
+          const subData = await fetchBidSubmissionById(existingSubId);
+          setSubmission(subData);
+        } else {
+          // Find matching default vendor for this tender
+          const matchedBidder = groundTruthBidders.find(
+            (b) => b.tenderId === decodedTenderId || (tData && (b.tenderId === tData.id || b.tenderId === tData.tender_number))
+          ) || groundTruthBidders[1]; // default Vanguard
+
+          setSelectedVendorCode(matchedBidder.bidderCode);
+          const newSub = await createOrResumeBidSubmission(
+            tData?.tender_number || tData?.id || decodedTenderId,
+            matchedBidder.legalName
+          );
+          setSubmission(newSub);
+        }
+      } catch (err: any) {
+        console.error("Workspace initialization error:", err);
+        setErrorMessage(err.message || "Could not initialize submission workspace.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initWorkspace();
+  }, [decodedTenderId, searchParams]);
+
+  // Handle vendor switch
+  const handleVendorSwitch = async (vendorName: string, code: string) => {
+    setSelectedVendorCode(code);
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const tenderRef = tender?.tender_number || tender?.id || decodedTenderId;
+      const sub = await createOrResumeBidSubmission(tenderRef, vendorName);
+      setSubmission(sub);
+      router.replace(`/bidder/tenders/${encodeURIComponent(decodedTenderId)}/bid?submission_id=${sub.id}`);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to switch vendor identity");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = () => {
+  // Handle document upload
+  const handleFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile || !submission) return;
+
+    if (submission.status !== "DRAFT") {
+      setErrorMessage("Cannot upload files to a finalized/submitted bid.");
+      return;
+    }
+
+    setUploading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const uploadedDoc = await uploadBidDocument(submission.id, selectedFile, selectedDocType);
+      // Refresh submission
+      const refreshed = await fetchBidSubmissionById(submission.id);
+      setSubmission(refreshed);
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSuccessMessage(`Uploaded '${uploadedDoc.original_filename}' successfully.`);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to upload document.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Handle document deletion
+  const handleDeleteDocument = async (docId: string) => {
+    if (!submission || submission.status !== "DRAFT") return;
+    if (!confirm("Are you sure you want to remove this uploaded document?")) return;
+
+    try {
+      await deleteBidDocument(submission.id, docId);
+      const refreshed = await fetchBidSubmissionById(submission.id);
+      setSubmission(refreshed);
+      setSuccessMessage("Document removed.");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to delete document.");
+    }
+  };
+
+  // Handle finalize / submit
+  const handleFinalizeSubmission = async () => {
+    if (!submission) return;
+    if (submission.documents.length === 0) {
+      setErrorMessage("Please upload at least one required document before submitting your bid.");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to finalize and submit this bid? Once submitted, no further changes can be made.")) {
+      return;
+    }
+
     setSubmitting(true);
-    setTimeout(() => {
-      router.push(`/bidder/bids/BID-DEMO-001/success`);
-    }, 1200);
+    setErrorMessage(null);
+
+    try {
+      const res = await finalizeBidSubmission(submission.id);
+      const refreshed = await fetchBidSubmissionById(submission.id);
+      setSubmission(refreshed);
+      setSuccessMessage(res.message || "Bid submitted successfully!");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to finalize bid submission.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const taxAmount = Math.round(Number(form.quotedAmount) * Number(form.taxPercentage) / 100);
-  const totalAmount = Number(form.quotedAmount) + taxAmount;
+  if (loading) {
+    return (
+      <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-[#1e3a5f]" />
+        <p className="text-sm text-muted-foreground">Initializing Bid Submission Workspace...</p>
+      </div>
+    );
+  }
+
+  const isSubmitted = submission?.status === "SUBMITTED";
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-5 max-w-5xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
         <Link href="/bidder" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
         <span className="text-muted-foreground">/</span>
-        <Link href={`/bidder/tenders/${id}`} className="text-muted-foreground hover:text-foreground">{id}</Link>
+        <Link href="/bidder/tenders" className="text-muted-foreground hover:text-foreground">Tenders</Link>
         <span className="text-muted-foreground">/</span>
-        <span className="font-medium text-foreground">Submit Bid</span>
+        <Link href={`/bidder/tenders/${encodeURIComponent(decodedTenderId)}`} className="text-muted-foreground hover:text-foreground">
+          {tender?.tender_number || tender?.bidNumber || decodedTenderId}
+        </Link>
+        <span className="text-muted-foreground">/</span>
+        <span className="font-medium text-foreground">Bid Workspace</span>
       </div>
 
-      <div>
-        <h1 className="text-lg sm:text-xl font-semibold">Bid Submission</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{tender.title}</p>
-      </div>
-
-      {/* Step Indicator (Scrollable on small devices) */}
-      <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex items-center gap-2 min-w-max">
-          {STEPS.map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <button
-                onClick={() => setStep(i)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  i === step ? "bg-[#1e3a5f] text-white" :
-                  i < step ? "bg-emerald-100 text-emerald-700" :
-                  "bg-muted text-muted-foreground"
-                }`}
-              >
-                {i < step ? <CheckCircle2 className="h-3 w-3" /> : <span className="w-3 text-center">{i + 1}</span>}
-                {s}
-              </button>
-              {i < STEPS.length - 1 && <div className="h-px w-4 sm:w-6 bg-border" />}
-            </div>
-          ))}
+      {/* Header Banner */}
+      <div className="bg-white border rounded-xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span className="text-xs font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+              {tender?.tender_number || tender?.bidNumber || decodedTenderId}
+            </span>
+            {isSubmitted ? (
+              <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs">
+                <Lock className="w-3 h-3" /> SUBMITTED &amp; LOCKED
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 gap-1 text-xs">
+                <FileText className="w-3 h-3" /> DRAFT IN PROGRESS
+              </Badge>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {submission?.documents.length || 0} Documents Uploaded
+            </span>
+          </div>
+          <h1 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+            {tender?.title}
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Buyer: {tender?.organization || tender?.buyer} · Category: {tender?.category}
+          </p>
         </div>
+
+        {/* Action Button */}
+        {!isSubmitted ? (
+          <Button
+            onClick={handleFinalizeSubmission}
+            disabled={submitting || (submission?.documents.length || 0) === 0}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-medium shrink-0"
+          >
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Finalize &amp; Submit Bid
+          </Button>
+        ) : (
+          <div className="text-right">
+            <div className="text-xs text-emerald-700 font-semibold flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Submitted for GeM Evaluation
+            </div>
+            {submission?.submitted_at && (
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                {new Date(submission.submitted_at).toLocaleString("en-IN")}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Step Content */}
+      {/* Notifications */}
+      {errorMessage && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm p-3 rounded-lg flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+      {successMessage && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm p-3 rounded-lg flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+          <span>{successMessage}</span>
+        </div>
+      )}
+
+      {/* Bidder Identity Selection */}
       <Card>
-        <CardContent className="p-4 sm:p-6">
-          {step === 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><Label className="text-xs sm:text-sm">Legal Name</Label><Input value={form.legalName} onChange={(e) => setForm({ ...form, legalName: e.target.value })} className="mt-1" /></div>
-              <div><Label className="text-xs sm:text-sm">PAN</Label><Input value={form.pan} onChange={(e) => setForm({ ...form, pan: e.target.value })} className="mt-1" /></div>
-              <div><Label className="text-xs sm:text-sm">GSTIN</Label><Input value={form.gstin} onChange={(e) => setForm({ ...form, gstin: e.target.value })} className="mt-1" /></div>
-              <div><Label className="text-xs sm:text-sm">Udyam Number</Label><Input value={form.udyam} onChange={(e) => setForm({ ...form, udyam: e.target.value })} className="mt-1" /></div>
-              <div><Label className="text-xs sm:text-sm">Registration Number</Label><Input value={form.regNumber} onChange={(e) => setForm({ ...form, regNumber: e.target.value })} className="mt-1" /></div>
-              <div><Label className="text-xs sm:text-sm">Authorized Representative</Label><Input value={form.representative} onChange={(e) => setForm({ ...form, representative: e.target.value })} className="mt-1" /></div>
-              <div className="sm:col-span-2"><Label className="text-xs sm:text-sm">Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="mt-1" /></div>
-              <div><Label className="text-xs sm:text-sm">State</Label><Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="mt-1" /></div>
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="space-y-4">
-              <div><Label className="text-xs sm:text-sm">Product Model</Label><Input value={form.productModel} onChange={(e) => setForm({ ...form, productModel: e.target.value })} className="mt-1" /></div>
-              <div><Label className="text-xs sm:text-sm">Technical Specifications</Label><Textarea value={form.specifications} onChange={(e) => setForm({ ...form, specifications: e.target.value })} className="mt-1" rows={3} /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><Label className="text-xs sm:text-sm">Delivery Period (days)</Label><Input value={form.deliveryPeriod} onChange={(e) => setForm({ ...form, deliveryPeriod: e.target.value })} className="mt-1" /></div>
-                <div><Label className="text-xs sm:text-sm">Warranty (months)</Label><Input value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} className="mt-1" /></div>
-              </div>
-              <div><Label className="text-xs sm:text-sm">Relevant Experience</Label><Textarea value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} className="mt-1" rows={2} /></div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div><Label className="text-xs sm:text-sm">Quoted Amount (₹)</Label><Input value={form.quotedAmount} onChange={(e) => setForm({ ...form, quotedAmount: e.target.value })} className="mt-1" /></div>
-                <div><Label className="text-xs sm:text-sm">Tax (%)</Label><Input value={form.taxPercentage} onChange={(e) => setForm({ ...form, taxPercentage: e.target.value })} className="mt-1" /></div>
-                <div>
-                  <Label className="text-xs sm:text-sm">Total Amount (₹)</Label>
-                  <div className="mt-1 rounded-md border bg-muted/50 px-3 py-2 text-sm font-semibold">
-                    ₹{totalAmount.toLocaleString('en-IN')}
+        <CardHeader className="py-3 px-4 sm:px-5 border-b bg-slate-50/50">
+          <CardTitle className="text-xs sm:text-sm font-semibold flex items-center gap-2 text-slate-800">
+            <Building2 className="w-4 h-4 text-[#1e3a5f]" />
+            Bidding Entity / Vendor Profile
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-5">
+          <div className="space-y-2">
+            <Label className="text-xs text-slate-600 font-medium">
+              Select Bidder Organization Profile (Phase 4 Synthetic Benchmark Bidders):
+            </Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {groundTruthBidders.map((b) => (
+                <button
+                  key={b.bidderCode}
+                  disabled={isSubmitted}
+                  onClick={() => handleVendorSwitch(b.legalName, b.bidderCode)}
+                  className={`p-3 rounded-lg border text-left text-xs transition-all ${
+                    selectedVendorCode === b.bidderCode
+                      ? "border-[#1e3a5f] bg-[#1e3a5f]/5 ring-1 ring-[#1e3a5f]"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  } ${isSubmitted ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  <div className="font-semibold text-slate-900 truncate">{b.legalName}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Code: <span className="font-mono">{b.bidderCode}</span> · {b.businessType}
                   </div>
-                </div>
-              </div>
-              <div className="rounded-md bg-blue-50 border border-blue-200 p-3">
-                <p className="text-xs text-blue-700">
-                  <strong>Note:</strong> Quoted amount should be exclusive of taxes. GST will be calculated separately as per applicable rates.
-                </p>
-              </div>
+                </button>
+              ))}
             </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-3">
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3">
-                Upload all required documents. Each document will be processed by Document Intelligence for extraction and verification.
-              </p>
-              <div className="space-y-2">
-                {documentTypes.map((doc) => (
-                  <div key={doc} className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 rounded-md border p-3 bg-card">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="text-xs sm:text-sm font-medium truncate">{doc}</span>
-                    </div>
-                    <div className="shrink-0 self-end xs:self-center">
-                      {uploadedDocs.has(doc) ? (
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[11px]">
-                          <CheckCircle2 className="h-3 w-3" /> Uploaded
-                        </Badge>
-                      ) : uploading === doc ? (
-                        <Badge variant="outline" className="gap-1 text-[11px]">
-                          <Loader2 className="h-3 w-3 animate-spin" /> Uploading...
-                        </Badge>
-                      ) : (
-                        <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => handleUpload(doc)}>
-                          <Upload className="h-3.5 w-3.5" /> Upload
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-sm sm:text-base">Review Your Bid</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3.5 sm:p-4 space-y-1.5">
-                    <p className="text-xs font-semibold uppercase text-muted-foreground">Company</p>
-                    <p className="text-sm font-medium">{form.legalName}</p>
-                    <p className="text-xs text-muted-foreground break-all">PAN: {form.pan} · GSTIN: {form.gstin}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3.5 sm:p-4 space-y-1.5">
-                    <p className="text-xs font-semibold uppercase text-muted-foreground">Commercial</p>
-                    <p className="text-sm font-medium">Total: ₹{totalAmount.toLocaleString('en-IN')}</p>
-                    <p className="text-xs text-muted-foreground">Quoted: ₹{Number(form.quotedAmount).toLocaleString('en-IN')} + {form.taxPercentage}% GST</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3.5 sm:p-4 space-y-1.5">
-                    <p className="text-xs font-semibold uppercase text-muted-foreground">Technical</p>
-                    <p className="text-sm font-medium">{form.productModel}</p>
-                    <p className="text-xs text-muted-foreground">Delivery: {form.deliveryPeriod} days · Warranty: {form.warranty} months</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3.5 sm:p-4 space-y-1.5">
-                    <p className="text-xs font-semibold uppercase text-muted-foreground">Documents</p>
-                    <p className="text-sm font-medium">{uploadedDocs.size} / {documentTypes.length} uploaded</p>
-                    <p className="text-xs text-muted-foreground">
-                      {uploadedDocs.size === documentTypes.length ? "All documents uploaded" : `${documentTypes.length - uploadedDocs.size} remaining`}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Navigation Controls */}
-      <div className="flex items-center justify-between gap-3 pt-1">
-        <Button variant="outline" size="sm" disabled={step === 0} onClick={() => setStep(step - 1)} className="gap-1 text-xs sm:text-sm">
-          <ArrowLeft className="h-3.5 w-3.5" /> Previous
-        </Button>
-        {step < STEPS.length - 1 ? (
-          <Button size="sm" onClick={() => setStep(step + 1)} className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1 text-xs sm:text-sm">
-            Next <ArrowRight className="h-3.5 w-3.5" />
-          </Button>
-        ) : (
-          <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 gap-1 text-xs sm:text-sm">
-            {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-            {submitting ? "Submitting..." : "Submit Bid"}
-          </Button>
-        )}
+      {/* Main Workspace Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left Column: Document Uploader */}
+        <div className="lg:col-span-1 space-y-4">
+          <Card>
+            <CardHeader className="py-3 px-4 border-b bg-slate-50/50">
+              <CardTitle className="text-xs sm:text-sm font-semibold flex items-center gap-2 text-slate-800">
+                <Upload className="w-4 h-4 text-[#1e3a5f]" />
+                Upload Bidder Document
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3.5">
+              {isSubmitted ? (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-xs text-slate-600">
+                  <Lock className="w-5 h-5 mx-auto text-slate-400 mb-1" />
+                  This bid has been submitted. Document uploads are locked.
+                </div>
+              ) : (
+                <form onSubmit={handleFileUpload} className="space-y-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Document Type Tag</Label>
+                    <select
+                      value={selectedDocType}
+                      onChange={(e) => setSelectedDocType(e.target.value)}
+                      className="w-full mt-1 px-3 py-2 text-xs border rounded-md bg-white focus:outline-hidden focus:ring-1 focus:ring-[#1e3a5f]"
+                    >
+                      {CANONICAL_DOC_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Select PDF File (Max 25MB)</Label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      className="w-full mt-1 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer border rounded-md p-1"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={!selectedFile || uploading}
+                    className="w-full bg-[#1e3a5f] hover:bg-[#152a45] text-white text-xs gap-1.5 py-2"
+                  >
+                    {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                    {uploading ? "Uploading & Storing..." : "Upload Document"}
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Uploaded Documents List */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader className="py-3 px-4 sm:px-5 border-b bg-slate-50/50 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs sm:text-sm font-semibold flex items-center gap-2 text-slate-800">
+                <FileText className="w-4 h-4 text-[#1e3a5f]" />
+                Uploaded Documents ({submission?.documents.length || 0})
+              </CardTitle>
+              <span className="text-[11px] text-muted-foreground font-mono">
+                Storage: Supabase Private Bucket
+              </span>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-5">
+              {(!submission?.documents || submission.documents.length === 0) ? (
+                <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-lg">
+                  <FileText className="w-8 h-8 text-slate-300 mx-auto mb-1.5" />
+                  <p className="text-xs text-slate-600 font-medium">No documents uploaded yet</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Upload CA certificates, purchase orders, MAF, and statutory affidavits on the left.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {submission.documents.map((doc: StoredVendorDocument) => (
+                    <div
+                      key={doc.id}
+                      className="p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                          <span className="text-xs font-semibold text-slate-900 truncate">
+                            {doc.original_filename}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                          {doc.document_type && (
+                            <span className="bg-blue-50 text-blue-700 border border-blue-200 font-mono px-1.5 py-0.2 rounded text-[10px]">
+                              {doc.document_type}
+                            </span>
+                          )}
+                          <span>
+                            {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : "PDF"}
+                          </span>
+                          <span>·</span>
+                          <span>{new Date(doc.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        {doc.download_url && (
+                          <a
+                            href={doc.download_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded transition-colors"
+                          >
+                            <Download className="w-3 h-3" /> View / Download
+                          </a>
+                        )}
+                        {!isSubmitted && (
+                          <button
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="text-slate-400 hover:text-rose-600 p-1.5 rounded transition-colors"
+                            title="Delete document"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

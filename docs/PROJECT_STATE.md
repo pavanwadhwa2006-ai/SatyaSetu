@@ -1,6 +1,6 @@
 # Satyaseetu Project State
 
-**Last Updated:** August 2026 (Phase 5 Completed)
+**Last Updated:** August 2026 (Phase 6 Completed)
 
 ---
 
@@ -15,59 +15,70 @@ Satyaseetu is an AI-powered integrated bid compliance verification platform for 
 | **Phase 3** | Ground Truth | **DONE** | Canonical tender + bidder ground truth data layer, independent requirements & evidence |
 | **Phase 4** | Synthetic Documents | **DONE** | 36 realistic synthetic bidder PDFs generated across 5 packages with watermarks |
 | **Phase 5** | Tender Intelligence | **DONE** | Machine-readable requirement model, field normalization, percentage bases, exemption rules |
-| **Phase 6** | Bidder Submission | **NOT STARTED** | Real bid submission, multi-document uploads, Supabase persistence |
-| **Phase 7–19** | Future Phases | **NOT STARTED** | Document intelligence, OCR, rules engine, compliance, risk, officer dashboard |
+| **Phase 6** | Bidder Submission | **DONE** | End-to-end frontend → FastAPI → Supabase workflow, multi-document PDF uploads & storage |
+| **Phase 7** | Document Intelligence | **NOT STARTED** | OCR/document parsing/fact extraction pipeline |
+| **Phase 8–19** | Future Phases | **NOT STARTED** | Evidence layer, rules engine, compliance, risk, officer dashboard |
 
 ---
 
-## 2. Phase 5 Tender Intelligence Layer
+## 2. Phase 6 Bidder Submission Layer
 
-Tender Intelligence transforms raw procurement RFP clauses into structured, machine-readable requirement specifications:
+Phase 6 implements the complete, secure end-to-end Bidder Submission workflow linking the Next.js frontend with FastAPI backend APIs, Supabase `bid_submissions` & `vendor_documents` tables, and Supabase Storage.
 
-### Requirement Model Specification
+### Workflow & Lifecycle Architecture
 
-Every requirement is mapped to:
-- `id`: Unique requirement UUID
-- `tenderId`: Associated tender identifier
-- `requirementCode`: Stable identifier (`REQ-T1-001` through `REQ-T3-010`)
-- `category`: `FINANCIAL`, `EXPERIENCE`, `TECHNICAL`, `STATUTORY`, `LOCATION`, `MANDATORY`, `PREFERENTIAL`
-- `normalizedField`: Canonical evaluation field name (e.g. `bidder_turnover_annual_avg`, `past_performance_quantity`, `local_content_percentage`)
-- `requirementType`: Standardized type (`FINANCIAL`, `EXPERIENCE`, `TECHNICAL`, `STATUTORY`, `DOCUMENT`, `VALIDITY`, `LOCATION`, `QUANTITY`, `OEM`, `MII`, `MSE`, `STARTUP`, `EMD`, `DELIVERY`, etc.)
-- `operator`: Controlled evaluation operator (`>=`, `<=`, `==`, `VALID`, `MATCH`, `EXISTS`, `PERCENT_OF`, etc.)
-- `thresholdValue`: Direct numerical or symbolic threshold
-- `thresholdUnit`: `INR`, `UNITS`, `DAYS`, `PERCENT`
-- `thresholdPercentage`: Decimal fraction for percentage-derived rules (e.g., `0.10` for 10%, `0.15` for 15%, `0.02` for 2%)
-- `baseValue`: Referenced base field for derived rules (`tender.estimatedValue`, `tender.totalQuantity`)
-- `originalValue`: Original human-readable requirement representation
-- `normalizedValue`: Machine-usable numerical representation
-- `mandatory`: Strict eligibility criteria flag
-- `exemptionMetadata`: Structured qualifications, evidence requirements, and conditions (`MSE_MANUFACTURER`, `STARTUP`, `MSE_SERVICE_PROVIDER`)
-- `evidenceRequired`: List of acceptable documentary proof types (`TURNOVER_CERTIFICATE`, `MAF`, `CRAC_CERTIFICATE`, `UDYAM_CERTIFICATE`, `NOTARIZED_AFFIDAVIT`, `ELECTRICAL_LICENSE`, etc.)
-- `sourceDocument`, `sourcePage`, `sourceClause`: Exact RFP clause citation and page provenance
+```
+Frontend (Next.js)
+  │
+  ├─ 1. View Tenders (/bidder/tenders) ──► GET /api/tenders
+  │
+  ├─ 2. Start Bid (/bidder/tenders/[id]) ─► POST /api/bid-submissions (Creates DRAFT)
+  │
+  ├─ 3. Upload PDFs (Workspace) ─────────► POST /api/bid-submissions/{id}/documents
+  │                                         ├─ Stores in Supabase Storage & local mirror
+  │                                         └─ Inserts into vendor_documents table
+  │
+  ├─ 4. List Uploads & Previews ─────────► GET /api/bid-submissions/{id}/documents
+  │
+  └─ 5. Finalize Submission ─────────────► POST /api/bid-submissions/{id}/submit
+                                            ├─ Transitions status: DRAFT -> SUBMITTED
+                                            └─ Locks further uploads/deletions
+```
 
----
+### Key Security & Integrity Controls
 
-## 3. Active Tenders Covered (34 Requirements)
-
-1. **Tender 1: `GEM/2026/B/7261466`** (MNIT Jaipur — Structural Software)
-   - 10 Structured Requirements
-   - Highlights: Bidder Turnover >= ₹5.00L (500000 INR), OEM Turnover >= ₹42.00L (4200000 INR), Past order >= 15% of tender value (₹3.675L / 367500 INR), EMD 2% (₹49,000) with MSE exemption, Delivery <= 15 Days, Rajasthan Service Centre.
-
-2. **Tender 2: `GEM/2026/B/7364888`** (ALIMCO — Ergonomic Chairs & Assemblies)
-   - 14 Structured Requirements
-   - Highlights: Bidder Turnover >= ₹34.00L (3400000 INR) with Startup exemption, Past performance >= 10% of total quantity (6,000 Units), Local content >= 50% (0.50 MII), EMD 2% (₹76,000), OEM Turnover >= ₹34.00L, Sample timeline <= 10 Days.
-
-3. **Tender 3: `GEM/2026/B/7676747`** (Trade Marks Registry Ahmedabad — Electrical Services)
-   - 10 Structured Requirements
-   - Highlights: Bidder Turnover >= ₹3.00L (300000 INR), Class-A Gujarat Electrical License, Gujarat commercial premises, GSTR-3B filings for 3 consecutive months (Apr, May, Jun 2026), Bank Solvency with zero IBC proceedings, 100% ISI/BIS materials, EMD 2% (₹1,04,000).
+1. **Zero Client-Side Privileges:** Frontend never communicates with privileged Supabase service keys. All storage and database calls are brokered through FastAPI backend endpoints.
+2. **File Validation:** Strictly validates file type (`.pdf`), file header, and file size (max 25MB). Rejects executables or invalid formats.
+3. **Storage Sanitization:** Sanitizes filenames against path traversal attacks. Storage paths follow a deterministic pattern: `vendor-documents/{tender_id}/{submission_id}/{document_id}_{safe_filename}`.
+4. **Lifecycle Modification Locks:** Once a bid transitions to `SUBMITTED`, all modification endpoints (`POST /documents`, `DELETE /documents`) are strictly rejected.
+5. **No Premature Evaluation:** Phase 6 solely ingests and tracks documents with status `UPLOADED`. Document presence is never interpreted as proof of compliance at this stage.
 
 ---
 
-## 4. API Endpoints
+## 3. API Endpoints
 
-- `GET /api/tender-intelligence/requirements` — Returns all 34 machine-readable requirements.
-- `GET /api/tender-intelligence/{tender_id}/requirements` — Returns requirements for a specific tender by UUID or GeM bid number.
-- `GET /api/tender-intelligence/{tender_id}/summary` — Returns aggregated category counts and metrics.
+- `POST /api/bid-submissions` — Creates or resumes a DRAFT bid submission for a tender and vendor.
+- `GET /api/bid-submissions` — Lists bid submissions with optional `vendor_id`, `tender_id`, or `status` filtering.
+- `GET /api/bid-submissions/{id}` — Returns full bid submission details with attached vendor documents and tender metadata.
+- `POST /api/bid-submissions/{id}/documents` — Uploads and stores a PDF document with its classification tag.
+- `GET /api/bid-submissions/{id}/documents` — Lists all uploaded documents for a bid.
+- `GET /api/bid-submissions/{id}/documents/{doc_id}/download` — Streams/downloads stored PDF document.
+- `DELETE /api/bid-submissions/{id}/documents/{doc_id}` — Deletes an uploaded document (DRAFT only).
+- `POST /api/bid-submissions/{id}/submit` — Finalizes the bid submission and locks documents.
+
+---
+
+## 4. Frontend Routes & Components
+
+- `/bidder/tenders` — Available GeM tenders list loaded live from FastAPI.
+- `/bidder/tenders/[id]` — Tender specifications overview with "Start Bid Submission" action.
+- `/bidder/tenders/[id]/bid` — Dedicated Bid Submission Workspace:
+  - Vendor identity selection (supports canonical demo bidders)
+  - Submission status banner (`DRAFT` vs `SUBMITTED`)
+  - Document type dropdown and file uploader
+  - Real-time uploaded documents table with view/download and delete actions
+  - Submit / Finalize action with confirmation.
+- `/bidder/bids` — "My Bid Submissions" dashboard with live status tracking.
 
 ---
 
@@ -80,11 +91,12 @@ python -m pytest -v
 ```
 
 Verified Test Suites:
+- `tests/test_bid_submissions.py` (5 test scenarios) — **100% PASS**
 - `tests/test_tender_intelligence.py` (10 test scenarios) — **100% PASS**
 - `tests/test_synthetic_docs.py` (5 test scenarios) — **100% PASS**
 - `tests/test_ground_truth.py` (4 test scenarios) — **100% PASS**
 - `tests/test_tenders.py` & `tests/test_health.py` (7 test scenarios) — **100% PASS**
-- **Total: 26 / 26 backend tests passing.**
+- **Total: 31 / 31 backend tests passing.**
 
 ### Frontend Build:
 ```bash
@@ -96,5 +108,5 @@ npm run build
 
 ## 6. Next Implementation Step
 
-**Phase 6 — Bidder Submission**
-- Build real bid submission workflows, multi-document file uploads, and Supabase database persistence for incoming vendor bids.
+**Phase 7 — Document Intelligence**
+- Build OCR, classification, and structured fact extraction pipeline for uploaded vendor PDFs.
