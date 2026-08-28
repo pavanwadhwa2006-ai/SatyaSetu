@@ -14,7 +14,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.api import health, auth, tenders, vendors, ground_truth, tender_intelligence
+from app.api import (
+    health,
+    auth,
+    tenders,
+    vendors,
+    ground_truth,
+    tender_intelligence,
+    bid_submissions,
+)
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -76,6 +84,7 @@ def create_app() -> FastAPI:
     app.include_router(vendors.router, prefix=API_PREFIX)
     app.include_router(ground_truth.router, prefix=API_PREFIX)
     app.include_router(tender_intelligence.router, prefix=API_PREFIX)
+    app.include_router(bid_submissions.router, prefix=API_PREFIX)
 
     return app
 

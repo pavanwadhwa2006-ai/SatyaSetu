@@ -119,6 +119,12 @@ VENDORS = [
     {"legal_name": "Bharat Industrial Systems Ltd. [SYNTHETIC]", "display_name": "Bharat Industrial", "status": "ACTIVE"},
     {"legal_name": "National Process Equipments Pvt. Ltd. [SYNTHETIC]", "display_name": "National Process Equipments", "status": "ACTIVE"},
     {"legal_name": "Reliable Instruments Pvt. Ltd. [SYNTHETIC]", "display_name": "Reliable Instruments", "status": "ACTIVE"},
+    # 5 Canonical Hackathon Bidders
+    {"legal_name": "Nexus Infotech & Trading Private Limited", "display_name": "Nexus Infotech", "status": "ACTIVE"},
+    {"legal_name": "Vanguard Seating Systems Private Limited", "display_name": "Vanguard Seating", "status": "ACTIVE"},
+    {"legal_name": "Zenith Ergonomics & Components Private Limited", "display_name": "Zenith Ergonomics", "status": "ACTIVE"},
+    {"legal_name": "Apex Electrical Solutions Private Limited", "display_name": "Apex Electrical", "status": "ACTIVE"},
+    {"legal_name": "Voltech Power & Infra Services Private Limited", "display_name": "Voltech Power", "status": "ACTIVE"},
 ]
 
 
