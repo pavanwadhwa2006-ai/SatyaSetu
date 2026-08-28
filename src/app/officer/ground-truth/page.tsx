@@ -40,7 +40,7 @@ import {
 export default function GroundTruthPage() {
   const [selectedTenderId, setSelectedTenderId] = useState<string>(groundTruthTenders[0].id);
   const [selectedBidderId, setSelectedBidderId] = useState<string>('bidder-t1-b2');
-  const [activeTab, setActiveTab] = useState<"requirements" | "documents" | "profile" | "validation">("requirements");
+  const [activeTab, setActiveTab] = useState<"intelligence" | "requirements" | "documents" | "profile" | "validation">("intelligence");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const selectedTender = useMemo(() => {
@@ -314,6 +314,17 @@ export default function GroundTruthPage() {
       {/* Navigation Tabs */}
       <div className="flex border-b border-slate-200">
         <button
+          onClick={() => setActiveTab("intelligence")}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === "intelligence"
+              ? "border-[#1e3a5f] text-[#1e3a5f] font-semibold"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          Tender Intelligence ({requirements.length} Structured Rules)
+        </button>
+        <button
           onClick={() => setActiveTab("requirements")}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === "requirements"
@@ -358,6 +369,114 @@ export default function GroundTruthPage() {
           Benchmark Integrity Verification
         </button>
       </div>
+
+      {/* TAB 0: TENDER INTELLIGENCE (PHASE 5) */}
+      {activeTab === "intelligence" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              Machine-readable procurement requirements, normalized field definitions, evaluation operators, evidence criteria, and statutory exemption rules for <strong>{selectedTender.bidNumber}</strong>.
+            </p>
+            <span className="text-[11px] font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-700">
+              {requirements.filter((r) => r.mandatory).length} Mandatory / {requirements.length} Total Rules
+            </span>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-3.5 w-28">Rule Code</th>
+                  <th className="py-3 px-3.5 w-44">Normalized Field</th>
+                  <th className="py-3 px-3.5 w-60">Human Requirement Text</th>
+                  <th className="py-3 px-3.5 w-48">Evaluation Rule & Operator</th>
+                  <th className="py-3 px-3.5 w-48">Evidence Document Types</th>
+                  <th className="py-3 px-3.5 w-44">Exemption Metadata</th>
+                  <th className="py-3 px-3.5">Source RFP Clause</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {requirements.map((req) => (
+                  <tr key={req.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3 px-3.5 align-top">
+                      <span className="font-mono font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
+                        {req.requirementCode}
+                      </span>
+                      <div className="text-[10px] text-muted-foreground mt-1">
+                        {req.mandatory ? (
+                          <span className="text-rose-600 font-semibold">MANDATORY</span>
+                        ) : (
+                          <span className="text-slate-500">OPTIONAL</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3.5 align-top">
+                      <span className="font-mono font-semibold text-[#1e3a5f] bg-[#1e3a5f]/5 px-1.5 py-0.5 rounded text-[11px] block mb-1">
+                        {req.normalizedField}
+                      </span>
+                      <span className="text-[10px] bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
+                        Type: {req.requirementType}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3.5 align-top">
+                      <p className="text-slate-800 font-medium leading-snug">{req.requirementText}</p>
+                    </td>
+                    <td className="py-3 px-3.5 align-top font-mono">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                        <span className="text-slate-500 font-normal">{req.operator}</span>
+                        <span>{req.originalValue || String(req.thresholdValue || '')}</span>
+                      </div>
+                      {req.baseValue && (
+                        <span className="text-[10px] text-slate-500 block mt-0.5">
+                          Base: {req.baseValue}
+                        </span>
+                      )}
+                      {req.normalizedValue !== undefined && req.normalizedValue !== null && (
+                        <span className="text-[10px] text-slate-400 block">
+                          Norm: {String(req.normalizedValue)} {req.thresholdUnit || ''}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3.5 align-top">
+                      {req.evidenceRequired && req.evidenceRequired.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {req.evidenceRequired.map((ev, i) => (
+                            <span key={i} className="text-[10px] font-mono bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.2 rounded">
+                              {ev}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[10px]">None specified</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3.5 align-top text-[11px]">
+                      {req.exemptionMetadata ? (
+                        <div className="space-y-0.5">
+                          <span className="font-semibold text-emerald-700 block">
+                            {req.exemptionMetadata.qualifiesFor.join(', ')}
+                          </span>
+                          <span className="text-[10px] text-slate-500 block">
+                            Req: {req.exemptionMetadata.requiredEvidence}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[10px]">No Exemption</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3.5 align-top text-slate-600 text-[11px]">
+                      <div className="font-medium text-slate-800">{req.sourceClause}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {req.sourceDocument} (p. {req.sourcePage})
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: REQUIREMENTS & COMPLIANCE MATRIX */}
       {activeTab === "requirements" && (

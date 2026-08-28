@@ -14,17 +14,26 @@ export type RequirementCategory =
   | 'COMMERCIAL';
 
 export type RequirementType =
-  | 'NUMERIC'
-  | 'BOOLEAN'
+  | 'FINANCIAL'
+  | 'EXPERIENCE'
+  | 'TECHNICAL'
+  | 'STATUTORY'
   | 'DOCUMENT'
   | 'VALIDITY'
-  | 'EXPERIENCE'
   | 'LOCATION'
-  | 'TECHNICAL'
-  | 'FINANCIAL'
-  | 'STATUTORY'
+  | 'QUANTITY'
+  | 'OEM'
+  | 'MII'
+  | 'MSE'
+  | 'STARTUP'
+  | 'EMD'
+  | 'DECLARATION'
+  | 'DELIVERY'
+  | 'WARRANTY'
+  | 'NUMERIC'
+  | 'BOOLEAN'
   | 'EXEMPTION'
-  | 'DECLARATION';
+  | 'OTHER';
 
 export type RequirementOperator =
   | '>='
@@ -34,7 +43,16 @@ export type RequirementOperator =
   | 'VALID'
   | 'MATCH'
   | 'CONTAINS'
-  | 'NOT_EXISTS';
+  | 'NOT_EXISTS'
+  | 'PERCENT_OF'
+  | 'DATE_BEFORE'
+  | 'DATE_AFTER';
+
+export interface ExemptionMetadata {
+  qualifiesFor: string[];
+  requiredEvidence: string;
+  condition: string;
+}
 
 export interface GroundTruthTender {
   id: string;
@@ -63,12 +81,19 @@ export interface TenderRequirement {
   requirementCode: string;
   category: RequirementCategory;
   requirementText: string;
+  normalizedField: string;
   requirementType: RequirementType;
   operator: RequirementOperator;
   thresholdValue?: string | number | boolean;
   thresholdUnit?: string;
+  thresholdPercentage?: number;
+  baseValue?: string;
+  originalValue?: string;
+  normalizedValue?: string | number | boolean | null;
   mandatory: boolean;
   exemptionRule?: string;
+  exemptionMetadata?: ExemptionMetadata;
+  evidenceRequired?: string[];
   sourceDocument: string;
   sourcePage: number;
   sourceClause: string;

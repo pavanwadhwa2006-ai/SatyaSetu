@@ -1,6 +1,6 @@
 # Satyaseetu Project State
 
-**Last Updated:** August 2026 (Phase 3 Completed)
+**Last Updated:** August 2026 (Phase 5 Completed)
 
 ---
 
@@ -13,99 +13,88 @@ Satyaseetu is an AI-powered integrated bid compliance verification platform for 
 | **Phase 1** | Foundation | **DONE** | FastAPI, Supabase, Auth, RBAC, RLS, Schema, Health & Core APIs verified |
 | **Phase 2** | Tender Dataset | **DONE** | 5 actual GeM tenders loaded, deterministic seed, document metadata associated |
 | **Phase 3** | Ground Truth | **DONE** | Canonical tender + bidder ground truth data layer, independent requirements & evidence |
-| **Phase 4** | Synthetic Documents | **NOT STARTED** | Realistic fictional bidder PDFs generation |
-| **Phase 5–19** | Future Phases | **NOT STARTED** | Tender intelligence, submission, OCR, rules engine, compliance, risk, officer dashboard |
+| **Phase 4** | Synthetic Documents | **DONE** | 36 realistic synthetic bidder PDFs generated across 5 packages with watermarks |
+| **Phase 5** | Tender Intelligence | **DONE** | Machine-readable requirement model, field normalization, percentage bases, exemption rules |
+| **Phase 6** | Bidder Submission | **NOT STARTED** | Real bid submission, multi-document uploads, Supabase persistence |
+| **Phase 7–19** | Future Phases | **NOT STARTED** | Document intelligence, OCR, rules engine, compliance, risk, officer dashboard |
 
 ---
 
-## 2. Phase 3 Ground Truth Dataset
+## 2. Phase 5 Tender Intelligence Layer
 
-The Ground Truth layer defines the canonical evaluation standard across 3 tenders and 5 bidders:
+Tender Intelligence transforms raw procurement RFP clauses into structured, machine-readable requirement specifications:
 
-### Tenders & Bidders Breakdown
+### Requirement Model Specification
+
+Every requirement is mapped to:
+- `id`: Unique requirement UUID
+- `tenderId`: Associated tender identifier
+- `requirementCode`: Stable identifier (`REQ-T1-001` through `REQ-T3-010`)
+- `category`: `FINANCIAL`, `EXPERIENCE`, `TECHNICAL`, `STATUTORY`, `LOCATION`, `MANDATORY`, `PREFERENTIAL`
+- `normalizedField`: Canonical evaluation field name (e.g. `bidder_turnover_annual_avg`, `past_performance_quantity`, `local_content_percentage`)
+- `requirementType`: Standardized type (`FINANCIAL`, `EXPERIENCE`, `TECHNICAL`, `STATUTORY`, `DOCUMENT`, `VALIDITY`, `LOCATION`, `QUANTITY`, `OEM`, `MII`, `MSE`, `STARTUP`, `EMD`, `DELIVERY`, etc.)
+- `operator`: Controlled evaluation operator (`>=`, `<=`, `==`, `VALID`, `MATCH`, `EXISTS`, `PERCENT_OF`, etc.)
+- `thresholdValue`: Direct numerical or symbolic threshold
+- `thresholdUnit`: `INR`, `UNITS`, `DAYS`, `PERCENT`
+- `thresholdPercentage`: Decimal fraction for percentage-derived rules (e.g., `0.10` for 10%, `0.15` for 15%, `0.02` for 2%)
+- `baseValue`: Referenced base field for derived rules (`tender.estimatedValue`, `tender.totalQuantity`)
+- `originalValue`: Original human-readable requirement representation
+- `normalizedValue`: Machine-usable numerical representation
+- `mandatory`: Strict eligibility criteria flag
+- `exemptionMetadata`: Structured qualifications, evidence requirements, and conditions (`MSE_MANUFACTURER`, `STARTUP`, `MSE_SERVICE_PROVIDER`)
+- `evidenceRequired`: List of acceptable documentary proof types (`TURNOVER_CERTIFICATE`, `MAF`, `CRAC_CERTIFICATE`, `UDYAM_CERTIFICATE`, `NOTARIZED_AFFIDAVIT`, `ELECTRICAL_LICENSE`, etc.)
+- `sourceDocument`, `sourcePage`, `sourceClause`: Exact RFP clause citation and page provenance
+
+---
+
+## 3. Active Tenders Covered (34 Requirements)
 
 1. **Tender 1: `GEM/2026/B/7261466`** (MNIT Jaipur — Structural Software)
-   - **`T1-B2` — Nexus Infotech & Trading Pvt. Ltd.**
-   - **Expected Benchmark:** `NON_COMPLIANT`
-   - **Key Failures:** Bidder Turnover (₹3.80L < ₹5.00L), OEM Turnover (₹38L < ₹42L), Expired generic MAF, Past order value (₹2.40L < ₹3.675L), Private client domain, Ineligible trader EMD exemption, Missing Rajasthan service centre, Unnotarized letterhead affidavit.
+   - 10 Structured Requirements
+   - Highlights: Bidder Turnover >= ₹5.00L (500000 INR), OEM Turnover >= ₹42.00L (4200000 INR), Past order >= 15% of tender value (₹3.675L / 367500 INR), EMD 2% (₹49,000) with MSE exemption, Delivery <= 15 Days, Rajasthan Service Centre.
 
-2. **Tender 2: `GEM/2026/B/7364888`** (ALIMCO — Chair Assemblies)
-   - **`T2-B1` — Vanguard Seating Systems Pvt. Ltd.**
-     - **Expected Benchmark:** `COMPLIANT`
-     - **Key Passes:** Turnover ₹49.17L (>= ₹34L), Past supply 8,000 units (>= 6,000), CRAC verified, In-house OEM manufacturer, 78.4% Make in India local content, MSE EMD exemption, Notarized affidavit.
-   - **`T2-B2` — Zenith Ergonomics & Components Pvt. Ltd.**
-     - **Expected Benchmark:** `REVIEW` (Non-Compliant with Human Review)
-     - **Key Failures & Flags:** Turnover ₹20.15L (< ₹34L), 3,500 units (< 6,000), Private unlisted client, Missing CRAC/invoices, Expired OEM MAF, Sample timeline 20-25 days, Unnotarized affidavit; Review flags: Provisional DPIIT Startup acknowledgement, 52% self-declared MII, Address mismatch.
+2. **Tender 2: `GEM/2026/B/7364888`** (ALIMCO — Ergonomic Chairs & Assemblies)
+   - 14 Structured Requirements
+   - Highlights: Bidder Turnover >= ₹34.00L (3400000 INR) with Startup exemption, Past performance >= 10% of total quantity (6,000 Units), Local content >= 50% (0.50 MII), EMD 2% (₹76,000), OEM Turnover >= ₹34.00L, Sample timeline <= 10 Days.
 
 3. **Tender 3: `GEM/2026/B/7676747`** (Trade Marks Registry Ahmedabad — Electrical Services)
-   - **`T3-B1` — Apex Electrical Solutions Pvt. Ltd.** *(Normalized from T5-B1)*
-     - **Expected Benchmark:** `COMPLIANT`
-     - **Key Passes:** Turnover ₹5.20L (>= ₹3.00L), Govt electrical contract ₹8.45L, Class-A Gujarat license valid to 2029, Ghatlodia Ahmedabad premises, GSTR-3B filings Apr-Jun 2026, Notarized ₹100 affidavit, Bank Solvency, ISI material compliance.
-   - **`T3-B2` — Voltech Power & Infra Services Pvt. Ltd.**
-     - **Expected Benchmark:** `NON_COMPLIANT`
-     - **Key Failures:** Turnover ₹2.40L (< ₹3.00L), Delhi GSTIN without Gujarat registration, Retail LED bulb supply only, Zero Gujarat presence, Expired electrical license (Jan 2025), Delinquent May & Jun 2026 GST returns, Unnotarized affidavit, Non-ISI materials, Active NCLT/IBC Corporate Insolvency, Invalid EMD claim.
+   - 10 Structured Requirements
+   - Highlights: Bidder Turnover >= ₹3.00L (300000 INR), Class-A Gujarat Electrical License, Gujarat commercial premises, GSTR-3B filings for 3 consecutive months (Apr, May, Jun 2026), Bank Solvency with zero IBC proceedings, 100% ISI/BIS materials, EMD 2% (₹1,04,000).
 
 ---
 
-## 3. Database & Structured Data State
+## 4. API Endpoints
 
-- `tenders`: **5 rows** in Supabase (3 featured in Ground Truth + 2 additional GeM tenders)
-- `tender_documents`: **5 rows**
-- `tender_requirements`: **34 independent structured requirements**
-- `bidders`: **5 normalized bidders** (`T1-B2`, `T2-B1`, `T2-B2`, `T3-B1`, `T3-B2`)
-- `bidder_documents`: **29 structured submitted documents**
-- `bidder_evidence`: **49 structured extracted facts & field values**
-- `compliance_results`: **49 calculated compliance result rows**
-- `benchmarks`: **5 master bidder benchmark records**
-
----
-
-## 4. Ground Truth UI Explorer
-
-A dedicated Ground Truth Dataset Explorer is available at:
-- Route: `/officer/ground-truth`
-- Features:
-  1. Interactive Tender Selector
-  2. Tender Information Card & Requirement Metrics
-  3. Evaluated Bidder Selector with Normalized Codes & Badges
-  4. Requirements & Compliance Matrix with deterministic evaluation reasons
-  5. Submitted Documents & Extracted Evidence Explorer
-  6. Bidder Entity Profile & Metadata
-  7. Live Benchmark Integrity Verification Suite (5/5 assertion checks)
+- `GET /api/tender-intelligence/requirements` — Returns all 34 machine-readable requirements.
+- `GET /api/tender-intelligence/{tender_id}/requirements` — Returns requirements for a specific tender by UUID or GeM bid number.
+- `GET /api/tender-intelligence/{tender_id}/summary` — Returns aggregated category counts and metrics.
 
 ---
 
 ## 5. How to Run and Test
 
-### Frontend:
-```bash
-npm run dev
-# Open http://localhost:3000/officer/ground-truth
-```
-
-### Backend:
-```bash
-cd backend
-python -m uvicorn app.main:app --reload --port 8000
-```
-
-### Automated Backend Tests:
+### Backend Test Suite:
 ```bash
 cd backend
 python -m pytest -v
 ```
 
-Verified Test Scenarios:
-- `tests/test_ground_truth.py::test_get_ground_truth_tenders` — PASS
-- `tests/test_ground_truth.py::test_get_ground_truth_bidders` — PASS
-- `tests/test_ground_truth.py::test_apex_normalization` — PASS
-- `tests/test_ground_truth.py::test_all_five_bidder_benchmarks` — PASS
-- `tests/test_health.py::test_health_check` — PASS
-- `tests/test_tenders.py` (6 test cases) — PASS
+Verified Test Suites:
+- `tests/test_tender_intelligence.py` (10 test scenarios) — **100% PASS**
+- `tests/test_synthetic_docs.py` (5 test scenarios) — **100% PASS**
+- `tests/test_ground_truth.py` (4 test scenarios) — **100% PASS**
+- `tests/test_tenders.py` & `tests/test_health.py` (7 test scenarios) — **100% PASS**
+- **Total: 26 / 26 backend tests passing.**
+
+### Frontend Build:
+```bash
+npm run build
+```
+- Next.js static build verified with complete pre-rendering and 0 TypeScript errors.
 
 ---
 
 ## 6. Next Implementation Step
 
-**Phase 4 — Synthetic Bidder Document Generator**
-- Generate realistic synthetic PDF documents matching the ground truth specifications with clearly labeled hackathon-only watermarks.
+**Phase 6 — Bidder Submission**
+- Build real bid submission workflows, multi-document file uploads, and Supabase database persistence for incoming vendor bids.

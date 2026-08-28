@@ -1,0 +1,232 @@
+{
+  "datasetVersion": "1.0.0-phase4",
+  "generatedFor": "SatyaSetu SIH Demo Dataset",
+  "watermark": "SYNTHETIC DATA \u2014 FOR HACKATHON DEMONSTRATION ONLY",
+  "packages": [
+    {
+      "folder": "T1-B2-Nexus",
+      "tenderNumber": "GEM/2026/B/7261466",
+      "bidderCode": "T1-B2",
+      "legalName": "Nexus Infotech & Trading Private Limited",
+      "documentCount": 8,
+      "documents": [
+        {
+          "code": "DOC-T1-B2-CA-TURNOVER",
+          "file": "Nexus_CA_Turnover_Cert.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T1-B2-OEM-TURNOVER",
+          "file": "OEM_CSI_Turnover_Statement.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T1-B2-MAF",
+          "file": "Nexus_Reseller_MAF_Generic.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T1-B2-EXP-PO",
+          "file": "PO_Horizon_Techworks.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T1-B2-UDYAM-MSE",
+          "file": "Nexus_Udyam_Registration.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T1-B2-MII-DECLARATION",
+          "file": "Nexus_MII_SelfDeclaration.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T1-B2-TECH-DELIVERY",
+          "file": "Nexus_Technical_Delivery_Proposal.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T1-B2-NON-BLACKLISTING",
+          "file": "Nexus_NonBlacklisting_PlainPaper.pdf",
+          "pages": 1
+        }
+      ]
+    },
+    {
+      "folder": "T2-B1-Vanguard",
+      "tenderNumber": "GEM/2026/B/7364888",
+      "bidderCode": "T2-B1",
+      "legalName": "Vanguard Seating Systems Private Limited",
+      "documentCount": 6,
+      "documents": [
+        {
+          "code": "DOC-T2-B1-CA-TURNOVER",
+          "file": "Vanguard_Audited_Turnover_Certificate.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B1-PAST-SUPPLY",
+          "file": "Vanguard_Supply_Performance_8000units.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B1-INVOICES-CRAC",
+          "file": "Vanguard_CRAC_Certificates.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B1-UDYAM-MFG",
+          "file": "Vanguard_Udyam_Manufacturing_Kanpur.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B1-MII-CA-CERT",
+          "file": "Vanguard_MII_CA_Certificate_78.4pct.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B1-NOTARIZED-AFFIDAVIT",
+          "file": "Vanguard_Notarized_Affidavit.pdf",
+          "pages": 1
+        }
+      ]
+    },
+    {
+      "folder": "T2-B2-Zenith",
+      "tenderNumber": "GEM/2026/B/7364888",
+      "bidderCode": "T2-B2",
+      "legalName": "Zenith Ergonomics & Components Private Limited",
+      "documentCount": 7,
+      "documents": [
+        {
+          "code": "DOC-T2-B2-CA-TURNOVER",
+          "file": "Zenith_CA_Turnover_2Years.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B2-STARTUP-ACK",
+          "file": "Zenith_DPIIT_Application_Ack.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B2-EXP-PO",
+          "file": "Zenith_AlphaTrading_PO_3500units.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B2-OEM-MAF",
+          "file": "Zenith_Expired_OEM_MAF.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B2-MII-SELF",
+          "file": "Zenith_MII_Self_Declaration.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B2-SAMPLE-UNDERTAKING",
+          "file": "Zenith_Sample_Timeline_Undertaking.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T2-B2-NON-BLACKLISTING",
+          "file": "Zenith_NonBlacklisting_Letterhead.pdf",
+          "pages": 1
+        }
+      ]
+    },
+    {
+      "folder": "T3-B1-Apex",
+      "tenderNumber": "GEM/2026/B/7676747",
+      "bidderCode": "T3-B1",
+      "legalName": "Apex Electrical Solutions Private Limited",
+      "documentCount": 7,
+      "documents": [
+        {
+          "code": "DOC-T3-B1-CA-TURNOVER",
+          "file": "Apex_Audited_Turnover_Cert.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B1-GOVT-CONTRACT",
+          "file": "Apex_Govt_Polytechnic_AMC_Cert.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B1-ELEC-LICENSE",
+          "file": "Apex_ClassA_Electrical_License_Gujarat.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B1-GST-RETURNS",
+          "file": "Apex_GSTR3B_Apr_May_Jun2026.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B1-NOTARIZED-AFFIDAVIT",
+          "file": "Apex_Notarized_NonBlacklisting_Affidavit.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B1-SOLVENCY",
+          "file": "Apex_Bank_Solvency_Certificate.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B1-ISI-UNDERTAKING",
+          "file": "Apex_ISI_Material_Undertaking.pdf",
+          "pages": 1
+        }
+      ]
+    },
+    {
+      "folder": "T3-B2-Voltech",
+      "tenderNumber": "GEM/2026/B/7676747",
+      "bidderCode": "T3-B2",
+      "legalName": "Voltech Power & Infra Services Private Limited",
+      "documentCount": 8,
+      "documents": [
+        {
+          "code": "DOC-T3-B2-CA-TURNOVER",
+          "file": "Voltech_CA_Turnover_Cert.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B2-GST-CERT",
+          "file": "Voltech_GST_Delhi_Registration.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B2-EXP-PO",
+          "file": "Voltech_PO_LED_Bulb_Supply.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B2-ELEC-LICENSE",
+          "file": "Voltech_Expired_Electrical_License.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B2-GST-RETURNS",
+          "file": "Voltech_Partial_GSTR3B_Apr2026.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B2-NON-BLACKLISTING",
+          "file": "Voltech_NonBlacklisting_PlainPaper.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B2-TECH-PROPOSAL",
+          "file": "Voltech_Technical_Material_Proposal.pdf",
+          "pages": 1
+        },
+        {
+          "code": "DOC-T3-B2-LITIGATION-DISCLOSURE",
+          "file": "Voltech_NCLT_IBC_Disclosure.pdf",
+          "pages": 1
+        }
+      ]
+    }
+  ]
+}

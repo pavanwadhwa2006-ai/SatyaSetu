@@ -5,8 +5,8 @@
 | 1 Foundation            | DONE        | TBD   | Database/Auth/API/RBAC foundation verified |
 | 2 Tender Dataset        | DONE        | TBD   | 5 actual GeM tenders + document metadata   |
 | 3 Ground Truth          | DONE        | TBD   | 3 tenders, 5 bidders, canonical benchmarks |
-| 4 Synthetic Documents   | NOT STARTED | TBD   | Fictional bidder PDFs                      |
-| 5 Tender Intelligence   | NOT STARTED | TBD   | Requirement extraction                     |
+| 4 Synthetic Documents   | DONE        | TBD   | 36 watermarked realistic bidder PDFs       |
+| 5 Tender Intelligence   | DONE        | TBD   | Machine-readable requirement models        |
 | 6 Bidder Submission     | NOT STARTED | TBD   | Real uploads and persistence               |
 | 7 Document Intelligence | NOT STARTED | TBD   | OCR/classification/extraction              |
 | 8 Evidence Layer        | NOT STARTED | TBD   | Page/source traceability                   |
@@ -24,60 +24,59 @@
 
 ## Current Phase
 
-Phase 3 — Ground Truth
+Phase 5 — Tender Intelligence
 
 Status: DONE
 
-Phase 3 has been implemented and verified across both the Next.js frontend dataset layer and FastAPI backend.
+Phase 5 has been implemented and verified, establishing structured machine-readable requirements with normalized numeric values, percentage-based criteria, exemption metadata, and evidence requirements.
 
-## Phase 3 Completed
+## Phase 5 Completed
 
-* Structured canonical Ground Truth dataset across 3 tenders:
-  1. `GEM/2026/B/7261466` (MNIT Jaipur — Structural Software)
-  2. `GEM/2026/B/7364888` (ALIMCO — Chair Assemblies)
-  3. `GEM/2026/B/7676747` (Trade Marks Registry Ahmedabad — Electrical Services)
-* 5 normalized bidder packages with full statutory profiles:
-  - `T1-B2` (Nexus Infotech & Trading Pvt. Ltd.) -> Expected: `NON_COMPLIANT`
-  - `T2-B1` (Vanguard Seating Systems Pvt. Ltd.) -> Expected: `COMPLIANT`
-  - `T2-B2` (Zenith Ergonomics & Components Pvt. Ltd.) -> Expected: `REVIEW`
-  - `T3-B1` (Apex Electrical Solutions Pvt. Ltd.) [Normalized from T5-B1] -> Expected: `COMPLIANT`
-  - `T3-B2` (Voltech Power & Infra Services Pvt. Ltd.) -> Expected: `NON_COMPLIANT`
-* 34 independent tender requirements structured with types, operators, threshold values, units, and clauses
-* 29 structured submitted bidder documents
-* 49 structured extracted evidence facts with source pages, confidence scores, and raw quotes
-* 49 calculated compliance result records with deterministic evaluation reasons
-* Ground Truth Dataset Explorer UI at `/officer/ground-truth` with live integrity validation
-* Backend schemas and endpoints (`/api/ground-truth/tenders`, `/api/ground-truth/bidders`, `/api/ground-truth/benchmarks`)
-* Automated test suite in `backend/tests/test_ground_truth.py` (all 11 backend tests passing)
-* Next.js production build verified with complete static page generation
+* Structured 34 canonical tender requirements into machine-readable format across 3 active tenders:
+  - `tender-t1` (MNIT Structural Software): 10 requirements
+  - `tender-t2` (ALIMCO Chair Assemblies): 14 requirements
+  - `tender-t3` (Trade Marks Registry Electrical): 10 requirements
+* Standardized requirement types: `FINANCIAL`, `EXPERIENCE`, `TECHNICAL`, `STATUTORY`, `DOCUMENT`, `VALIDITY`, `LOCATION`, `QUANTITY`, `OEM`, `MII`, `MSE`, `STARTUP`, `EMD`, `DELIVERY`, etc.
+* Standardized operators: `>=`, `<=`, `==`, `VALID`, `MATCH`, `PERCENT_OF`, `EXISTS`, etc.
+* Numerical values normalized (e.g. ₹5.00L -> 500000 INR, ₹34.00L -> 3400000 INR, 15% -> 0.15, 10% -> 0.10).
+* Percentage requirements preserve base relationships (`tender.estimatedValue`, `tender.totalQuantity`).
+* Structured exemption metadata representing qualifying entities, evidence requirements, and conditions.
+* Documented evidence requirements for each rule (`TURNOVER_CERTIFICATE`, `MAF`, `CRAC_CERTIFICATE`, `UDYAM_CERTIFICATE`, `NOTARIZED_AFFIDAVIT`, `ELECTRICAL_LICENSE`, etc.).
+* Exact source traceability preserved (`sourceDocument`, `sourcePage`, `sourceClause`).
+* Created backend schemas: `backend/app/schemas/tender_intelligence.py`.
+* Created backend API router: `backend/app/api/tender_intelligence.py` (`/api/tender-intelligence/requirements`, `/{tender_id}/requirements`, `/{tender_id}/summary`).
+* Added frontend Tender Intelligence explorer tab in `/officer/ground-truth`.
+* Created test suite: `backend/tests/test_tender_intelligence.py` (all 26 backend tests passing).
+* Next.js static build verified with 0 errors.
 
-## Phase 3 Verification
+## Phase 5 Verification
 
-* `tests/test_ground_truth.py::test_get_ground_truth_tenders` — PASS
-* `tests/test_ground_truth.py::test_get_ground_truth_bidders` — PASS
-* `tests/test_ground_truth.py::test_apex_normalization` — PASS
-* `tests/test_ground_truth.py::test_all_five_bidder_benchmarks` — PASS
-* Next.js Build (`npm run build`) — PASS
-* Benchmark Outcome Verification:
-  - `T1-B2` Nexus: `NON_COMPLIANT` (8 failing mandatory criteria) — PASS
-  - `T2-B1` Vanguard: `COMPLIANT` (10/10 passed criteria) — PASS
-  - `T2-B2` Zenith: `REVIEW` (8 failing + 3 review flags) — PASS
-  - `T3-B1` Apex: `COMPLIANT` (8/8 passed criteria, normalized to T3-B1) — PASS
-  - `T3-B2` Voltech: `NON_COMPLIANT` (10 failing mandatory criteria) — PASS
+* `tests/test_tender_intelligence.py::test_all_structured_requirements_count` — PASS
+* `tests/test_tender_intelligence.py::test_three_active_tenders_requirements` — PASS
+* `tests/test_tender_intelligence.py::test_lookup_by_gem_bid_number` — PASS
+* `tests/test_tender_intelligence.py::test_numeric_normalization_accuracy` — PASS
+* `tests/test_tender_intelligence.py::test_percentage_based_requirements_and_bases` — PASS
+* `tests/test_tender_intelligence.py::test_exemption_metadata_structure` — PASS
+* `tests/test_tender_intelligence.py::test_evidence_requirements_presence` — PASS
+* `tests/test_tender_intelligence.py::test_source_traceability_preserved` — PASS
+* `tests/test_tender_intelligence.py::test_tender_summary_endpoint` — PASS
+* `tests/test_tender_intelligence.py::test_phase3_endpoints_compatibility` — PASS
+* Pytest test suite: 26/26 PASS
+* Next.js Build (`npm run build`): PASS
 
 ## Important Development State
 
-Phases 1, 2, and 3 are CLOSED.
+Phases 1, 2, 3, 4, and 5 are CLOSED.
 
 The next active development phase is:
 
-Phase 4 — Synthetic Bidder Document Generator
+Phase 6 — Bidder Submission
 
-Phase 4 has NOT started yet.
+Phase 6 has NOT started yet.
 
 ## Next Objective
 
-Generate realistic synthetic PDF bidder submission documents with marked hackathon watermarks matching the Ground Truth facts.
+Implement vendor bid submission workflows, multi-document file uploads, and Supabase database persistence.
 
 ## Definition of Done
 
