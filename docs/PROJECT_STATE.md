@@ -1,6 +1,6 @@
 # Satyaseetu Project State
 
-**Last Updated:** August 2026 (Phase 6 Completed)
+**Last Updated:** August 2026 (Phase 7 Completed)
 
 ---
 
@@ -16,69 +16,64 @@ Satyaseetu is an AI-powered integrated bid compliance verification platform for 
 | **Phase 4** | Synthetic Documents | **DONE** | 36 realistic synthetic bidder PDFs generated across 5 packages with watermarks |
 | **Phase 5** | Tender Intelligence | **DONE** | Machine-readable requirement model, field normalization, percentage bases, exemption rules |
 | **Phase 6** | Bidder Submission | **DONE** | End-to-end frontend → FastAPI → Supabase workflow, multi-document PDF uploads & storage |
-| **Phase 7** | Document Intelligence | **NOT STARTED** | OCR/document parsing/fact extraction pipeline |
-| **Phase 8–19** | Future Phases | **NOT STARTED** | Evidence layer, rules engine, compliance, risk, officer dashboard |
+| **Phase 7** | Document Intelligence | **DONE** | PDF parsing, classification, fact extraction, numeric normalization, page & quote provenance |
+| **Phase 8** | Evidence Layer | **NOT STARTED** | Page/source traceability linking facts to evaluation criteria |
+| **Phase 9–19** | Future Phases | **NOT STARTED** | Mock verification, cross-document, rules engine, compliance, risk, officer dashboard |
 
 ---
 
-## 2. Phase 6 Bidder Submission Layer
+## 2. Phase 7 Document Intelligence Layer
 
-Phase 6 implements the complete, secure end-to-end Bidder Submission workflow linking the Next.js frontend with FastAPI backend APIs, Supabase `bid_submissions` & `vendor_documents` tables, and Supabase Storage.
+Phase 7 builds the Document Intelligence engine that ingests uploaded bidder PDFs from Supabase Storage and transforms them into structured domain facts with verifiable page numbers and verbatim quotations.
 
-### Workflow & Lifecycle Architecture
+### Architecture & Extraction Flow
 
 ```
-Frontend (Next.js)
+Uploaded Bidder PDF (Supabase Storage / Local Mirror)
   │
-  ├─ 1. View Tenders (/bidder/tenders) ──► GET /api/tenders
+  ▼
+pypdf Text Extraction (Page-by-page tokenization & text layout)
   │
-  ├─ 2. Start Bid (/bidder/tenders/[id]) ─► POST /api/bid-submissions (Creates DRAFT)
+  ▼
+Document Classifier (Taxonomy mapping: TURNOVER_CERTIFICATE, MAF, CRAC, PO, UDYAM, DPIIT, ELECTRICAL_LICENSE, GSTR-3B, MII, AFFIDAVIT, SOLVENCY, TECHNICAL_PROPOSAL)
   │
-  ├─ 3. Upload PDFs (Workspace) ─────────► POST /api/bid-submissions/{id}/documents
-  │                                         ├─ Stores in Supabase Storage & local mirror
-  │                                         └─ Inserts into vendor_documents table
+  ▼
+Deterministic Fact Extractor (Structured regex & table parsing)
+  ├── Canonical Field Name (e.g. bidder_turnover_annual_avg, electrical_contractor_license, local_content_percentage)
+  ├── Raw Display Value (e.g. "₹49,17,000", "Class-A (CLASS_A_ACTIVE)", "8,000 Units", "78.4% Local Content")
+  ├── Normalized Value (e.g. 4917000, "CLASS_A_ACTIVE", 8000, 0.784)
+  ├── Measurement Unit (INR, UNITS, PERCENT, DAYS, YEARS)
+  ├── 1-Indexed Source Page Number
+  ├── Verbatim Text Quotation (Sentence/Line from PDF)
+  └── Confidence Score (Transparent 0.95 - 0.99 for deterministic extraction)
   │
-  ├─ 4. List Uploads & Previews ─────────► GET /api/bid-submissions/{id}/documents
-  │
-  └─ 5. Finalize Submission ─────────────► POST /api/bid-submissions/{id}/submit
-                                            ├─ Transitions status: DRAFT -> SUBMITTED
-                                            └─ Locks further uploads/deletions
+  ▼
+Processing Status Transition (vendor_documents.processing_status = 'PROCESSED')
 ```
 
-### Key Security & Integrity Controls
+### Strict Phase Boundaries Enforced
 
-1. **Zero Client-Side Privileges:** Frontend never communicates with privileged Supabase service keys. All storage and database calls are brokered through FastAPI backend endpoints.
-2. **File Validation:** Strictly validates file type (`.pdf`), file header, and file size (max 25MB). Rejects executables or invalid formats.
-3. **Storage Sanitization:** Sanitizes filenames against path traversal attacks. Storage paths follow a deterministic pattern: `vendor-documents/{tender_id}/{submission_id}/{document_id}_{safe_filename}`.
-4. **Lifecycle Modification Locks:** Once a bid transitions to `SUBMITTED`, all modification endpoints (`POST /documents`, `DELETE /documents`) are strictly rejected.
-5. **No Premature Evaluation:** Phase 6 solely ingests and tracks documents with status `UPLOADED`. Document presence is never interpreted as proof of compliance at this stage.
+1. **Information Extraction Only:** Document Intelligence solely extracts facts present in the text. It does NOT decide whether a bidder PASSES or FAILS or is COMPLIANT/NON-COMPLIANT.
+2. **Zero Benchmark Leakage:** Benchmark verdicts from Ground Truth are never emitted or leaked into extracted facts.
+3. **Traceability:** Every extracted fact maintains source page provenance and verbatim quotation for future evidence verification.
 
 ---
 
 ## 3. API Endpoints
 
-- `POST /api/bid-submissions` — Creates or resumes a DRAFT bid submission for a tender and vendor.
-- `GET /api/bid-submissions` — Lists bid submissions with optional `vendor_id`, `tender_id`, or `status` filtering.
-- `GET /api/bid-submissions/{id}` — Returns full bid submission details with attached vendor documents and tender metadata.
-- `POST /api/bid-submissions/{id}/documents` — Uploads and stores a PDF document with its classification tag.
-- `GET /api/bid-submissions/{id}/documents` — Lists all uploaded documents for a bid.
-- `GET /api/bid-submissions/{id}/documents/{doc_id}/download` — Streams/downloads stored PDF document.
-- `DELETE /api/bid-submissions/{id}/documents/{doc_id}` — Deletes an uploaded document (DRAFT only).
-- `POST /api/bid-submissions/{id}/submit` — Finalizes the bid submission and locks documents.
+- `POST /api/documents/{document_id}/process` — Processes a single uploaded PDF document and returns extracted facts.
+- `GET /api/documents/{document_id}/facts` — Retrieves all extracted structured facts for a document.
+- `POST /api/bid-submissions/{submission_id}/process` — Batch processes all documents attached to a bid submission.
+- `GET /api/bid-submissions/{submission_id}/facts` — Aggregates all extracted facts across all documents in a submission.
 
 ---
 
 ## 4. Frontend Routes & Components
 
-- `/bidder/tenders` — Available GeM tenders list loaded live from FastAPI.
-- `/bidder/tenders/[id]` — Tender specifications overview with "Start Bid Submission" action.
-- `/bidder/tenders/[id]/bid` — Dedicated Bid Submission Workspace:
-  - Vendor identity selection (supports canonical demo bidders)
-  - Submission status banner (`DRAFT` vs `SUBMITTED`)
-  - Document type dropdown and file uploader
-  - Real-time uploaded documents table with view/download and delete actions
-  - Submit / Finalize action with confirmation.
-- `/bidder/bids` — "My Bid Submissions" dashboard with live status tracking.
+- `/bidder/tenders/[id]/bid` — Interactive Bid Submission Workspace with inline Document Intelligence:
+  - Document status badge (`PROCESSED` vs `UPLOADED`)
+  - "Run Document Intelligence" batch extraction action
+  - Per-document expandable facts card displaying canonical field names, values, normalized values, page provenance, verbatim quotes, and confidence scores.
 
 ---
 
@@ -91,12 +86,13 @@ python -m pytest -v
 ```
 
 Verified Test Suites:
+- `tests/test_document_intelligence.py` (10 test scenarios) — **100% PASS**
 - `tests/test_bid_submissions.py` (5 test scenarios) — **100% PASS**
 - `tests/test_tender_intelligence.py` (10 test scenarios) — **100% PASS**
 - `tests/test_synthetic_docs.py` (5 test scenarios) — **100% PASS**
 - `tests/test_ground_truth.py` (4 test scenarios) — **100% PASS**
 - `tests/test_tenders.py` & `tests/test_health.py` (7 test scenarios) — **100% PASS**
-- **Total: 31 / 31 backend tests passing.**
+- **Total: 41 / 41 backend tests passing (100%).**
 
 ### Frontend Build:
 ```bash
@@ -108,5 +104,5 @@ npm run build
 
 ## 6. Next Implementation Step
 
-**Phase 7 — Document Intelligence**
-- Build OCR, classification, and structured fact extraction pipeline for uploaded vendor PDFs.
+**Phase 8 — Evidence Layer**
+- Page and source traceability linking extracted facts to evaluation criteria.

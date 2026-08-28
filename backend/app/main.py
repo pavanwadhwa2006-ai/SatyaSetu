@@ -22,6 +22,7 @@ from app.api import (
     ground_truth,
     tender_intelligence,
     bid_submissions,
+    document_intelligence,
 )
 
 # ── Logging ────────────────────────────────────────────────────────────────────
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(ground_truth.router, prefix=API_PREFIX)
     app.include_router(tender_intelligence.router, prefix=API_PREFIX)
     app.include_router(bid_submissions.router, prefix=API_PREFIX)
+    app.include_router(document_intelligence.router, prefix=API_PREFIX)
 
     return app
 

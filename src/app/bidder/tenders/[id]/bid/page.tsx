@@ -11,6 +11,7 @@ import {
   FileText, Upload, CheckCircle2,
   ArrowLeft, Send, Loader2, Trash2,
   Lock, AlertTriangle, Download, Building2,
+  Cpu, Sparkles, ChevronDown, ChevronUp,
 } from "lucide-react";
 import {
   fetchBackendTenderById,
@@ -19,8 +20,12 @@ import {
   uploadBidDocument,
   deleteBidDocument,
   finalizeBidSubmission,
+  processDocument,
+  processSubmissionDocuments,
   StoredBidSubmission,
   StoredVendorDocument,
+  DocumentFact,
+  DocumentProcessResult,
 } from "@/lib/api-client";
 import { groundTruthBidders, groundTruthTenders } from "@/data/ground-truth";
 
@@ -32,10 +37,10 @@ const CANONICAL_DOC_TYPES = [
   { value: "UDYAM_CERTIFICATE", label: "Udyam / MSME Registration Certificate" },
   { value: "DPIIT_RECOGNITION_CERT", label: "DPIIT Startup Recognition Certificate" },
   { value: "ELECTRICAL_LICENSE", label: "Class-A Electrical Contractor License" },
+  { value: "GSTR3B_RETURN", label: "GSTR-3B Tax Filing Return" },
   { value: "MII_DECLARATION", label: "Make in India (MII) Local Content Declaration" },
   { value: "NOTARIZED_AFFIDAVIT", label: "Notarized Non-Blacklisting Affidavit" },
   { value: "BANK_SOLVENCY_CERT", label: "Bank Solvency Certificate" },
-  { value: "GSTR3B_RETURN", label: "GSTR-3B Tax Filing Return" },
   { value: "TECHNICAL_PROPOSAL", label: "Technical Specifications & Delivery Proposal" },
   { value: "OTHER", label: "Other Supporting Document" },
 ];
@@ -51,6 +56,12 @@ export default function BidSubmissionWorkspacePage({ params }: { params: Promise
   const [selectedVendorCode, setSelectedVendorCode] = useState<string>("T2-B1");
   const [selectedDocType, setSelectedDocType] = useState<string>("TURNOVER_CERTIFICATE");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Document Intelligence state
+  const [extractedFactsByDoc, setExtractedFactsByDoc] = useState<Record<string, DocumentFact[]>>({});
+  const [expandedDocFacts, setExpandedDocFacts] = useState<Record<string, boolean>>({});
+  const [processingDocId, setProcessingDocId] = useState<string | null>(null);
+  const [batchProcessing, setBatchProcessing] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -140,16 +151,73 @@ export default function BidSubmissionWorkspacePage({ params }: { params: Promise
 
     try {
       const uploadedDoc = await uploadBidDocument(submission.id, selectedFile, selectedDocType);
+      
+      // Trigger automatic Document Intelligence extraction on upload
+      try {
+        const procResult = await processDocument(uploadedDoc.id);
+        setExtractedFactsByDoc((prev) => ({ ...prev, [uploadedDoc.id]: procResult.facts }));
+        setExpandedDocFacts((prev) => ({ ...prev, [uploadedDoc.id]: true }));
+      } catch (procErr) {
+        console.warn("Auto document intelligence note:", procErr);
+      }
+
       // Refresh submission
       const refreshed = await fetchBidSubmissionById(submission.id);
       setSubmission(refreshed);
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      setSuccessMessage(`Uploaded '${uploadedDoc.original_filename}' successfully.`);
+      setSuccessMessage(`Uploaded and processed '${uploadedDoc.original_filename}'.`);
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to upload document.");
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Process a single document
+  const handleProcessSingleDocument = async (docId: string) => {
+    setProcessingDocId(docId);
+    setErrorMessage(null);
+    try {
+      const res = await processDocument(docId);
+      setExtractedFactsByDoc((prev) => ({ ...prev, [docId]: res.facts }));
+      setExpandedDocFacts((prev) => ({ ...prev, [docId]: true }));
+      setSuccessMessage(`Extracted ${res.extracted_facts_count} facts from '${res.original_filename}'.`);
+      // Refresh submission to update badge
+      if (submission) {
+        const refreshed = await fetchBidSubmissionById(submission.id);
+        setSubmission(refreshed);
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Document Intelligence extraction failed.");
+    } finally {
+      setProcessingDocId(null);
+    }
+  };
+
+  // Process all documents in submission
+  const handleBatchProcessDocuments = async () => {
+    if (!submission) return;
+    setBatchProcessing(true);
+    setErrorMessage(null);
+    try {
+      const res = await processSubmissionDocuments(submission.id);
+      const newFactsMap: Record<string, DocumentFact[]> = {};
+      const newExpandedMap: Record<string, boolean> = {};
+      res.documents.forEach((d) => {
+        newFactsMap[d.document_id] = d.facts;
+        newExpandedMap[d.document_id] = true;
+      });
+      setExtractedFactsByDoc((prev) => ({ ...prev, ...newFactsMap }));
+      setExpandedDocFacts((prev) => ({ ...prev, ...newExpandedMap }));
+      setSuccessMessage(`Extracted ${res.total_facts_count} facts across ${res.documents_processed_count} documents.`);
+      // Refresh submission
+      const refreshed = await fetchBidSubmissionById(submission.id);
+      setSubmission(refreshed);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Batch document processing failed.");
+    } finally {
+      setBatchProcessing(false);
     }
   };
 
@@ -382,17 +450,26 @@ export default function BidSubmissionWorkspacePage({ params }: { params: Promise
           </Card>
         </div>
 
-        {/* Right Column: Uploaded Documents List */}
+        {/* Right Column: Uploaded Documents List with Document Intelligence facts */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
-            <CardHeader className="py-3 px-4 sm:px-5 border-b bg-slate-50/50 flex flex-row items-center justify-between">
+            <CardHeader className="py-3 px-4 sm:px-5 border-b bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <CardTitle className="text-xs sm:text-sm font-semibold flex items-center gap-2 text-slate-800">
                 <FileText className="w-4 h-4 text-[#1e3a5f]" />
                 Uploaded Documents ({submission?.documents.length || 0})
               </CardTitle>
-              <span className="text-[11px] text-muted-foreground font-mono">
-                Storage: Supabase Private Bucket
-              </span>
+              {submission && submission.documents.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={batchProcessing}
+                  onClick={handleBatchProcessDocuments}
+                  className="text-xs gap-1.5 h-7 border-blue-200 text-blue-800 bg-blue-50/60 hover:bg-blue-100"
+                >
+                  {batchProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-blue-600" />}
+                  Run Document Intelligence
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-4 sm:p-5">
               {(!submission?.documents || submission.documents.length === 0) ? (
@@ -404,56 +481,141 @@ export default function BidSubmissionWorkspacePage({ params }: { params: Promise
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2.5">
-                  {submission.documents.map((doc: StoredVendorDocument) => (
-                    <div
-                      key={doc.id}
-                      className="p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                          <span className="text-xs font-semibold text-slate-900 truncate">
-                            {doc.original_filename}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-muted-foreground">
-                          {doc.document_type && (
-                            <span className="bg-blue-50 text-blue-700 border border-blue-200 font-mono px-1.5 py-0.2 rounded text-[10px]">
-                              {doc.document_type}
-                            </span>
-                          )}
-                          <span>
-                            {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : "PDF"}
-                          </span>
-                          <span>·</span>
-                          <span>{new Date(doc.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                      </div>
+                <div className="space-y-3">
+                  {submission.documents.map((doc: StoredVendorDocument) => {
+                    const docFacts = extractedFactsByDoc[doc.id] || [];
+                    const isExpanded = expandedDocFacts[doc.id] ?? (docFacts.length > 0);
+                    const isDocProcessing = processingDocId === doc.id;
 
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                        {doc.download_url && (
-                          <a
-                            href={doc.download_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded transition-colors"
-                          >
-                            <Download className="w-3 h-3" /> View / Download
-                          </a>
-                        )}
-                        {!isSubmitted && (
-                          <button
-                            onClick={() => handleDeleteDocument(doc.id)}
-                            className="text-slate-400 hover:text-rose-600 p-1.5 rounded transition-colors"
-                            title="Delete document"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                    return (
+                      <div
+                        key={doc.id}
+                        className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-2xs"
+                      >
+                        <div className="p-3 bg-slate-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                              <span className="text-xs font-semibold text-slate-900 truncate">
+                                {doc.original_filename}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                              {doc.document_type && (
+                                <span className="bg-blue-50 text-blue-700 border border-blue-200 font-mono px-1.5 py-0.2 rounded text-[10px]">
+                                  {doc.document_type}
+                                </span>
+                              )}
+                              <span>
+                                {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : "PDF"}
+                              </span>
+                              <span>·</span>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] ${
+                                  doc.processing_status === "PROCESSED"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-slate-100 text-slate-600"
+                                }`}
+                              >
+                                {doc.processing_status === "PROCESSED" ? "Intelligence Processed" : "Uploaded"}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={isDocProcessing}
+                              onClick={() => handleProcessSingleDocument(doc.id)}
+                              className="text-[11px] h-7 px-2 text-blue-700 hover:bg-blue-50 gap-1"
+                              title="Run Phase 7 Document Intelligence"
+                            >
+                              {isDocProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Cpu className="w-3 h-3" />}
+                              Extract Facts
+                            </Button>
+                            {doc.download_url && (
+                              <a
+                                href={doc.download_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded transition-colors"
+                              >
+                                <Download className="w-3 h-3" /> Download
+                              </a>
+                            )}
+                            {!isSubmitted && (
+                              <button
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="text-slate-400 hover:text-rose-600 p-1.5 rounded transition-colors"
+                                title="Delete document"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setExpandedDocFacts((prev) => ({ ...prev, [doc.id]: !isExpanded }))}
+                              className="text-slate-500 hover:text-slate-800 p-1 rounded"
+                            >
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Extracted Facts Section */}
+                        {isExpanded && (
+                          <div className="p-3 border-t bg-white space-y-2 text-xs">
+                            <div className="flex items-center justify-between text-[11px] text-muted-foreground font-medium border-b pb-1">
+                              <span>Structured Facts Extracted ({docFacts.length})</span>
+                              <span>Method: Phase 7 Deterministic Parser</span>
+                            </div>
+                            {docFacts.length === 0 ? (
+                              <div className="text-[11px] text-slate-500 py-2 text-center">
+                                Click &quot;Extract Facts&quot; above to run Document Intelligence on this document.
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {docFacts.map((fact) => (
+                                  <div
+                                    key={fact.id}
+                                    className="p-2.5 rounded-md border border-slate-100 bg-slate-50/50 space-y-1.5"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                      <span className="font-mono font-semibold text-slate-800 text-[11px]">
+                                        {fact.field_name}
+                                      </span>
+                                      <div className="flex items-center gap-2 text-[10px]">
+                                        <span className="bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded">
+                                          Page {fact.source_page}
+                                        </span>
+                                        <span className="text-emerald-700 font-medium">
+                                          {(fact.confidence * 100).toFixed(0)}% Conf
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="text-slate-900 font-medium text-xs">
+                                      {fact.value}{" "}
+                                      {fact.normalized_value !== undefined && (
+                                        <span className="text-[11px] text-muted-foreground font-normal">
+                                          (Normalized: <code>{JSON.stringify(fact.normalized_value)}</code>)
+                                        </span>
+                                      )}
+                                    </div>
+                                    {fact.raw_quote && (
+                                      <div className="text-[11px] text-slate-600 italic bg-white p-1.5 rounded border border-slate-200/60">
+                                        &ldquo;{fact.raw_quote}&rdquo;
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
