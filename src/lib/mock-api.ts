@@ -63,16 +63,15 @@ export async function fetchTenders(): Promise<Tender[]> {
     const { data, error } = await supabase
       .from('tenders')
       .select('*')
-      .eq('status', 'OPEN')
       .order('created_at', { ascending: false });
 
-    if (!error && data && data.length > 0) {
+    if (!error && data) {
       return data.map(mapDbTenderToTender);
     }
   } catch (err) {
-    console.warn('Supabase fetch error, fallback to mock data:', err);
+    console.warn('Supabase fetch error for tenders:', err);
   }
-  return tenders;
+  return [];
 }
 
 export async function fetchTenderById(id: string) {
