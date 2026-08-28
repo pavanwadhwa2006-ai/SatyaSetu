@@ -11,12 +11,13 @@ import hmac
 import hashlib
 import base64
 from functools import lru_cache
-import supabase._sync.client as sync_client_mod
+try:
+    import supabase._sync.client as sync_client_mod  # type: ignore
+    sync_client_mod.is_valid_jwt = lambda key: True  # type: ignore
+except Exception:
+    pass
 
-# Bypass local regex format check to support all Supabase key types
-sync_client_mod.is_valid_jwt = lambda key: True
-
-from supabase import create_client, Client
+from supabase import create_client, Client  # type: ignore
 from app.core.config import get_settings
 
 
