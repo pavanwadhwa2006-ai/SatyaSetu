@@ -20,3 +20,6 @@ The current UI is the product foundation. Backend functionality is built underne
 
 ## Decision 007 — Real GeM Tender Dataset & Document Association Strategy
 In Phase 2, the placeholder synthetic tenders were replaced by five real GeM tenders representing distinct categories (Engineering Software, Chair Manufacturing, Electrical Maintenance, IT QCBS, and Multimedia/Manpower). Each tender maintains source provenance (`source = 'GEM_PUBLIC'`) and links directly to associated document metadata in `tender_documents`. The seed mechanism is strictly idempotent using `ON CONFLICT (tender_number)` upserts.
+
+## Decision 008 — Canonical Ground Truth Data Layer & Independent Requirement Evaluation
+In Phase 3, the ground truth evaluation standard was decoupled from raw document text. Compliance is calculated independently by comparing structured tender requirements (with explicit types, operators, and thresholds) against structured bidder evidence (with field names, normalized values, confidence, and page provenance). The 5 canonical bidder packages across 3 tenders are normalized (including normalising Apex Electrical to T3-B1) with reproducible master benchmark assertions (Nexus: NON_COMPLIANT, Vanguard: COMPLIANT, Zenith: REVIEW, Apex: COMPLIANT, Voltech: NON_COMPLIANT).

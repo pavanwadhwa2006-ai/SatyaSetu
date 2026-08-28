@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   BarChart3,
   ScrollText,
+  Database,
   Info,
 } from "lucide-react";
 import { useState } from "react";
@@ -31,6 +32,7 @@ const bidderNav: NavItem[] = [
 const officerNav: NavItem[] = [
   { label: "Dashboard", href: "/officer", icon: LayoutDashboard },
   { label: "Tender Evaluations", href: "/officer/tenders", icon: ClipboardCheck },
+  { label: "Ground Truth Dataset", href: "/officer/ground-truth", icon: Database },
   { label: "Reports", href: "/officer/reports", icon: BarChart3 },
   { label: "Audit Log", href: "/officer/audit", icon: ScrollText },
 ];

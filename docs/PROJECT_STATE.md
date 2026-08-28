@@ -1,6 +1,6 @@
 # Satyaseetu Project State
 
-**Last Updated:** August 2026 (Phase 2 Completed)
+**Last Updated:** August 2026 (Phase 3 Completed)
 
 ---
 
@@ -12,92 +12,100 @@ Satyaseetu is an AI-powered integrated bid compliance verification platform for 
 |---|---|---|---|
 | **Phase 1** | Foundation | **DONE** | FastAPI, Supabase, Auth, RBAC, RLS, Schema, Health & Core APIs verified |
 | **Phase 2** | Tender Dataset | **DONE** | 5 actual GeM tenders loaded, deterministic seed, document metadata associated |
-| **Phase 3** | Ground Truth | **NOT STARTED** | Hidden expected outcomes & evaluation ground truth |
-| **Phase 4–19** | Future Phases | **NOT STARTED** | Synthetic doc gen, OCR, rules engine, compliance, risk, officer dashboard |
+| **Phase 3** | Ground Truth | **DONE** | Canonical tender + bidder ground truth data layer, independent requirements & evidence |
+| **Phase 4** | Synthetic Documents | **NOT STARTED** | Realistic fictional bidder PDFs generation |
+| **Phase 5–19** | Future Phases | **NOT STARTED** | Tender intelligence, submission, OCR, rules engine, compliance, risk, officer dashboard |
 
 ---
 
-## 2. Actual Tender Dataset (Phase 2)
+## 2. Phase 3 Ground Truth Dataset
 
-Supabase contains the 5 actual GeM government tenders used as the foundational dataset for all compliance and verification workflows:
+The Ground Truth layer defines the canonical evaluation standard across 3 tenders and 5 bidders:
 
-| Tender Number | Domain / Category | Organization & Division | Eval Type | Est. Value (INR) |
-|---|---|---|---|---|
-| `GEM/2026/B/7261466` | Engineering Software (ETABS / SAFE / SAP2000) | Central Public Works Department (Structural Engineering Division) | QCBS | ₹24,50,000 |
-| `GEM/2026/B/7364888` | Manufacturing / Ergonomic Chair Components | Department of Heavy Industry (Furniture & Manufacturing Division) | LCS | ₹38,00,000 |
-| `GEM/2026/B/7676747` | Electrical Maintenance & Operations | Public Works Department (Electrical & Mechanical Maintenance Wing) | LCS | ₹52,00,000 |
-| `GEM/2026/B/7878577` | IT Project & System Integration Services | National Informatics Centre (e-Governance Implementation) | QCBS | ₹1,85,00,000 |
-| `GEM/2026/B/7903799` | Multimedia Production & Manpower Services | Ministry of Information and Broadcasting (Media Services Wing) | QCBS | ₹95,00,000 |
+### Tenders & Bidders Breakdown
 
-Every tender record has `source = 'GEM_PUBLIC'` and is linked to its primary document metadata record in `tender_documents`.
+1. **Tender 1: `GEM/2026/B/7261466`** (MNIT Jaipur — Structural Software)
+   - **`T1-B2` — Nexus Infotech & Trading Pvt. Ltd.**
+   - **Expected Benchmark:** `NON_COMPLIANT`
+   - **Key Failures:** Bidder Turnover (₹3.80L < ₹5.00L), OEM Turnover (₹38L < ₹42L), Expired generic MAF, Past order value (₹2.40L < ₹3.675L), Private client domain, Ineligible trader EMD exemption, Missing Rajasthan service centre, Unnotarized letterhead affidavit.
+
+2. **Tender 2: `GEM/2026/B/7364888`** (ALIMCO — Chair Assemblies)
+   - **`T2-B1` — Vanguard Seating Systems Pvt. Ltd.**
+     - **Expected Benchmark:** `COMPLIANT`
+     - **Key Passes:** Turnover ₹49.17L (>= ₹34L), Past supply 8,000 units (>= 6,000), CRAC verified, In-house OEM manufacturer, 78.4% Make in India local content, MSE EMD exemption, Notarized affidavit.
+   - **`T2-B2` — Zenith Ergonomics & Components Pvt. Ltd.**
+     - **Expected Benchmark:** `REVIEW` (Non-Compliant with Human Review)
+     - **Key Failures & Flags:** Turnover ₹20.15L (< ₹34L), 3,500 units (< 6,000), Private unlisted client, Missing CRAC/invoices, Expired OEM MAF, Sample timeline 20-25 days, Unnotarized affidavit; Review flags: Provisional DPIIT Startup acknowledgement, 52% self-declared MII, Address mismatch.
+
+3. **Tender 3: `GEM/2026/B/7676747`** (Trade Marks Registry Ahmedabad — Electrical Services)
+   - **`T3-B1` — Apex Electrical Solutions Pvt. Ltd.** *(Normalized from T5-B1)*
+     - **Expected Benchmark:** `COMPLIANT`
+     - **Key Passes:** Turnover ₹5.20L (>= ₹3.00L), Govt electrical contract ₹8.45L, Class-A Gujarat license valid to 2029, Ghatlodia Ahmedabad premises, GSTR-3B filings Apr-Jun 2026, Notarized ₹100 affidavit, Bank Solvency, ISI material compliance.
+   - **`T3-B2` — Voltech Power & Infra Services Pvt. Ltd.**
+     - **Expected Benchmark:** `NON_COMPLIANT`
+     - **Key Failures:** Turnover ₹2.40L (< ₹3.00L), Delhi GSTIN without Gujarat registration, Retail LED bulb supply only, Zero Gujarat presence, Expired electrical license (Jan 2025), Delinquent May & Jun 2026 GST returns, Unnotarized affidavit, Non-ISI materials, Active NCLT/IBC Corporate Insolvency, Invalid EMD claim.
 
 ---
 
-## 3. Database State
+## 3. Database & Structured Data State
 
-Current active tables and record counts in Supabase:
-
-- `tenders`: **5 rows** (The 5 actual GeM tenders; no placeholder synthetic tenders)
-- `tender_documents`: **5 rows** (1 primary associated PDF document metadata record per tender)
-- `vendors`: **4 rows** (Phase 1 synthetic vendor profiles preserved)
-- `bid_submissions`: **0 rows** (Phase 6+)
-- `vendor_documents`: **0 rows** (Phase 6+)
-- `user_profiles`: **0 rows** (Populated on Auth signup)
+- `tenders`: **5 rows** in Supabase (3 featured in Ground Truth + 2 additional GeM tenders)
+- `tender_documents`: **5 rows**
+- `tender_requirements`: **34 independent structured requirements**
+- `bidders`: **5 normalized bidders** (`T1-B2`, `T2-B1`, `T2-B2`, `T3-B1`, `T3-B2`)
+- `bidder_documents`: **29 structured submitted documents**
+- `bidder_evidence`: **49 structured extracted facts & field values**
+- `compliance_results`: **49 calculated compliance result rows**
+- `benchmarks`: **5 master bidder benchmark records**
 
 ---
 
-## 4. How to Seed the Database
+## 4. Ground Truth UI Explorer
 
-The seed mechanism is deterministic and idempotent. Running it multiple times updates existing records without creating duplicates.
+A dedicated Ground Truth Dataset Explorer is available at:
+- Route: `/officer/ground-truth`
+- Features:
+  1. Interactive Tender Selector
+  2. Tender Information Card & Requirement Metrics
+  3. Evaluated Bidder Selector with Normalized Codes & Badges
+  4. Requirements & Compliance Matrix with deterministic evaluation reasons
+  5. Submitted Documents & Extracted Evidence Explorer
+  6. Bidder Entity Profile & Metadata
+  7. Live Benchmark Integrity Verification Suite (5/5 assertion checks)
 
-### Option A — Using Python script (Recommended):
+---
+
+## 5. How to Run and Test
+
+### Frontend:
 ```bash
-cd backend
-python -m app.core.seed
-# OR
-python db/seed.py
+npm run dev
+# Open http://localhost:3000/officer/ground-truth
 ```
 
-### Option B — Using Supabase SQL Editor:
-Copy and execute [`backend/db/seed.sql`](file:///d:/SatyaSetu/backend/db/seed.sql) in the Supabase SQL editor.
-
----
-
-## 5. How to Run the Backend
-
+### Backend:
 ```bash
 cd backend
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
----
-
-## 6. How to Test the Backend
-
-Automated test suite using `pytest`:
-
+### Automated Backend Tests:
 ```bash
 cd backend
 python -m pytest -v
 ```
 
 Verified Test Scenarios:
-1. `GET /api/health` — Returns status `ok`, version `0.1.0`, environment `development`.
-2. `GET /api/tenders` — Returns HTTP 200 and list of all 5 actual GeM tenders.
-3. `GET /api/tenders/{id}` — Returns tender by UUID with associated `documents` metadata array.
-4. `GET /api/tenders/{tender_number}` — Returns tender by GeM tender number.
-5. Unique constraint & non-duplication tests.
+- `tests/test_ground_truth.py::test_get_ground_truth_tenders` — PASS
+- `tests/test_ground_truth.py::test_get_ground_truth_bidders` — PASS
+- `tests/test_ground_truth.py::test_apex_normalization` — PASS
+- `tests/test_ground_truth.py::test_all_five_bidder_benchmarks` — PASS
+- `tests/test_health.py::test_health_check` — PASS
+- `tests/test_tenders.py` (6 test cases) — PASS
 
 ---
 
-## 7. Known Limitations
+## 6. Next Implementation Step
 
-- Original physical tender PDF files are not committed into the git repository to keep repository size lean. The `tender_documents` table stores the storage path, original filename, and mime type ready for Supabase Storage bucket ingestion.
-- OCR / text extraction / requirement parsing is intentionally deferred to Phase 5 (Tender Intelligence).
-
----
-
-## 8. Next Implementation Step
-
-**Phase 3 — Ground Truth Dataset**
-- Define expected bidder facts and compliance outcomes matrix for each of the 5 tenders.
+**Phase 4 — Synthetic Bidder Document Generator**
+- Generate realistic synthetic PDF documents matching the ground truth specifications with clearly labeled hackathon-only watermarks.
