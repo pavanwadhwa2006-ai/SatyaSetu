@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     # ── Supabase ──────────────────────────────────────────────
     supabase_url: str = "https://xjvixzpiptghjurfycti.supabase.co"
     supabase_anon_key: str = "sb_publishable_D7rAXCwrz6LrPI834mbapg_fvF59KqA"
-    supabase_service_role_key: str = "sb_publishable_D7rAXCwrz6LrPI834mbapg_fvF59KqA"
-    supabase_jwt_secret: str = "sb_publishable_D7rAXCwrz6LrPI834mbapg_fvF59KqA"
+    supabase_service_role_key: str = ""
+    supabase_jwt_secret: str = ""
 
     # ── Gemini AI ─────────────────────────────────────────────
     gemini_api_key: str = ""
