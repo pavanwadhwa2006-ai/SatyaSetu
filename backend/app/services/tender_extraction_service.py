@@ -93,14 +93,27 @@ class TenderExtractionService:
 
             pdf_part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
 
-            response = client.models.generate_content(
-                model="gemini-2.5-pro",
-                contents=[pdf_part, TENDER_EXTRACTION_PROMPT],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.1,
-                ),
-            )
+            # Request extraction using Gemini 3.6 Flash
+            model_name = "gemini-3.6-flash"
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[pdf_part, TENDER_EXTRACTION_PROMPT],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.1,
+                    ),
+                )
+            except Exception as model_err:
+                logger.warning("Primary model %s failed, retrying with gemini-3.5-flash: %s", model_name, str(model_err))
+                response = client.models.generate_content(
+                    model="gemini-3.5-flash",
+                    contents=[pdf_part, TENDER_EXTRACTION_PROMPT],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.1,
+                    ),
+                )
 
             text_content = (response.text or "").strip()
             if text_content.startswith("```"):

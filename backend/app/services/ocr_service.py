@@ -37,13 +37,20 @@ Extract the following fields into a strictly valid JSON object matching this sch
 Return ONLY the raw JSON object. Do not include markdown code block formatting or conversational commentary.
 """
 
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    genai = None  # type: ignore
+    types = None  # type: ignore
+
 
 def _sanitize_log_message(msg: str) -> str:
     """Scrub potential API keys or secret tokens from log strings."""
     if not msg:
         return ""
     # Mask potential API key patterns (AIza..., sb_publishable..., bearer tokens)
-    sanitized = re.sub(r"(AIza[0-[#9A-Za-z-_]{35})", "[REDACTED_API_KEY]", msg)
+    sanitized = re.sub(r"(AIza[0-9A-Za-z-_]{35})", "[REDACTED_API_KEY]", msg)
     sanitized = re.sub(r"(sb_publishable_[A-Za-z0-9_-]+)", "[REDACTED_KEY]", sanitized)
     sanitized = re.sub(r"(Bearer\s+[A-Za-z0-9._-]+)", "Bearer [REDACTED_TOKEN]", sanitized)
     return sanitized
@@ -51,21 +58,18 @@ def _sanitize_log_message(msg: str) -> str:
 
 class OCRService:
     """
-    Gemini-powered Document Intelligence Service.
-    Downloads uploaded PDFs from Supabase Storage bucket 'vendor-documents' and extracts structured entity fields.
+    Service responsible for fetching PDFs from Supabase Storage and passing
+    them to Gemini 2.5 Flash for structured JSON entity extraction.
     """
 
-    def __init__(self):
-        self.settings = get_settings()
-        self.supabase = get_supabase_client()
+    def __init__(self, supabase=None, settings=None):
+        self.supabase = supabase or get_supabase_client()
+        self.settings = settings or get_settings()
 
     def download_pdf_from_storage(
         self, storage_path: str, bucket_name: str = "vendor-documents"
     ) -> bytes:
-        """
-        Download raw PDF file bytes from Supabase Storage bucket 'vendor-documents'.
-        Handles missing files and storage errors gracefully.
-        """
+        """Download raw binary PDF bytes from Supabase Storage."""
         logger.info(
             "Downloading file from storage bucket '%s', path: '%s'", bucket_name, storage_path
         )
@@ -92,16 +96,13 @@ class OCRService:
         self, pdf_bytes: bytes, file_name: str = "document.pdf"
     ) -> Dict[str, Any]:
         """
-        Send PDF bytes to Gemini 2.5 Pro via Google GenAI SDK for structured JSON extraction.
+        Send PDF bytes to Gemini 2.5 Flash via Google GenAI SDK for structured JSON extraction.
         """
-        try:
-            from google import genai
-            from google.genai import types
-        except ImportError as err:
-            logger.error("google-genai package is not installed: %s", str(err))
+        if genai is None or types is None:
+            logger.error("google-genai package is not installed.")
             raise ImportError(
                 "google-genai package is not installed. Run 'pip install google-genai'."
-            ) from err
+            )
 
         api_key = self.settings.effective_gemini_api_key
         if not api_key:
@@ -114,15 +115,27 @@ class OCRService:
 
             pdf_part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
 
-            # Request extraction using Gemini 2.5 Pro
-            response = client.models.generate_content(
-                model="gemini-2.5-pro",
-                contents=[pdf_part, OCR_EXTRACTION_PROMPT],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.1,
-                ),
-            )
+            # Request extraction using Gemini 2.5 Flash
+            model_name = "gemini-2.5-flash"
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[pdf_part, OCR_EXTRACTION_PROMPT],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.1,
+                    ),
+                )
+            except Exception as model_err:
+                logger.warning("Primary model %s failed, retrying with gemini-2.0-flash: %s", model_name, str(model_err))
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=[pdf_part, OCR_EXTRACTION_PROMPT],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.1,
+                    ),
+                )
 
             text_content = (response.text or "").strip()
             # Clean any accidental markdown code fences if present
