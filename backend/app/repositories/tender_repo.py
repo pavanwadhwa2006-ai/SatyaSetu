@@ -5,18 +5,20 @@ Uses the Supabase service_role client for server-side operations.
 """
 
 import logging
+import uuid
 from typing import Optional
 from app.core.database import get_supabase_client
 from app.schemas.tender import TenderCreate
 
 logger = logging.getLogger(__name__)
 
-# Columns to always select (avoids SELECT *)
+# Columns to select with documents relation
 TENDER_COLUMNS = (
     "id, tender_number, title, organization, department, category, description, "
     "source, status, estimated_value, submission_deadline, publish_date, "
     "bid_validity_days, evaluation_type, delivery_location, delivery_period_days, "
-    "warranty_months, emd_amount, created_by, created_at, updated_at"
+    "warranty_months, emd_amount, created_by, created_at, updated_at, "
+    "documents:tender_documents(*)"
 )
 
 
@@ -41,7 +43,7 @@ def get_all_tenders(
 
     try:
         response = query.execute()
-        return response.data or [], response.count or 0
+        return (response.data if response else []) or [], (response.count if response else 0) or 0
     except Exception as exc:
         logger.error("DB error fetching tenders: %s", exc)
         raise
@@ -49,20 +51,28 @@ def get_all_tenders(
 
 def get_tender_by_id(tender_id: str) -> Optional[dict]:
     """
-    Fetch a single tender by UUID.
+    Fetch a single tender by UUID or tender_number.
 
     Returns:
         Tender dict or None if not found.
     """
     client = get_supabase_client()
     try:
-        response = (
-            client.table("tenders")
-            .select(TENDER_COLUMNS)
-            .eq("id", tender_id)
-            .maybe_single()
-            .execute()
-        )
+        is_uuid = False
+        try:
+            uuid.UUID(str(tender_id))
+            is_uuid = True
+        except (ValueError, AttributeError):
+            is_uuid = False
+
+        query = client.table("tenders").select(TENDER_COLUMNS)
+        if is_uuid:
+            response = query.eq("id", tender_id).maybe_single().execute()
+        else:
+            response = query.eq("tender_number", tender_id).maybe_single().execute()
+
+        if response is None:
+            return None
         return response.data
     except Exception as exc:
         logger.error("DB error fetching tender %s: %s", tender_id, exc)

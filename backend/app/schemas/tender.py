@@ -5,7 +5,27 @@ Pydantic models for tender request/response validation.
 
 from typing import Optional
 from datetime import datetime, date
+import uuid
 from pydantic import BaseModel, Field, field_validator
+
+
+# ── Document Schemas ──────────────────────────────────────────────────────────
+
+class TenderDocumentResponse(BaseModel):
+    """Metadata response for an associated tender document."""
+    id: str
+    tender_id: str
+    original_filename: str
+    storage_path: Optional[str] = None
+    mime_type: Optional[str] = None
+    file_size: Optional[int] = None
+    processing_status: str = "UPLOADED"
+    uploaded_by: Optional[str] = None
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 # ── Shared base ────────────────────────────────────────────────────────────────
@@ -41,20 +61,20 @@ class TenderBase(BaseModel):
 
 class TenderCreate(TenderBase):
     """Request body for POST /api/tenders (officer only)."""
-    source: str = Field(default="MANUAL", max_length=50)
+    source: str = Field(default="GEM_PUBLIC", max_length=50)
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "tender_number": "SYNTHETIC-TENDER-006",
-                "title": "Procurement of Office Furniture",
-                "organization": "Central Secretariat",
-                "department": "Administrative Division",
-                "category": "Furniture / Office Equipment",
-                "description": "Supply and installation of ergonomic office furniture. [SYNTHETIC]",
+                "tender_number": "GEM/2026/B/7261466",
+                "title": "Procurement of Structural Engineering Software (ETABS, SAFE, SAP2000)",
+                "organization": "Central Public Works Department",
+                "department": "Structural Engineering & Design Division",
+                "category": "Engineering Software / Structural Analysis Software",
+                "description": "Supply, installation, licensing, and technical support for engineering software suite.",
                 "status": "OPEN",
-                "estimated_value": 5000000,
-                "source": "MANUAL",
+                "estimated_value": 2450000,
+                "source": "GEM_PUBLIC",
             }
         }
     }
@@ -87,20 +107,22 @@ class TenderResponse(TenderBase):
     created_at: datetime
     updated_at: datetime
     created_by: Optional[str] = None
+    documents: list[TenderDocumentResponse] = []
 
     model_config = {
         "from_attributes": True,
         "json_schema_extra": {
             "example": {
-                "id": "uuid-here",
-                "tender_number": "SYNTHETIC-TENDER-001",
-                "title": "Supply and Installation of Industrial Temperature Monitoring Equipment",
-                "organization": "Government Procurement Department",
-                "status": "EVALUATION",
-                "source": "SYNTHETIC",
-                "estimated_value": 18500000,
-                "created_at": "2026-08-01T00:00:00Z",
-                "updated_at": "2026-08-01T00:00:00Z",
+                "id": "0d1664c9-a97f-4451-a0fd-02ac047fb955",
+                "tender_number": "GEM/2026/B/7261466",
+                "title": "Procurement of Structural Engineering Software (ETABS, SAFE, SAP2000)",
+                "organization": "Central Public Works Department",
+                "status": "OPEN",
+                "source": "GEM_PUBLIC",
+                "estimated_value": 2450000,
+                "created_at": "2026-08-10T00:00:00Z",
+                "updated_at": "2026-08-10T00:00:00Z",
+                "documents": [],
             }
         },
     }

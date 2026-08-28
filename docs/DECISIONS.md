@@ -17,3 +17,6 @@ Every important extracted fact/compliance result must retain document and page p
 
 ## Decision 006 — Existing prototype is preserved
 The current UI is the product foundation. Backend functionality is built underneath it rather than rebuilding the interface unnecessarily.
+
+## Decision 007 — Real GeM Tender Dataset & Document Association Strategy
+In Phase 2, the placeholder synthetic tenders were replaced by five real GeM tenders representing distinct categories (Engineering Software, Chair Manufacturing, Electrical Maintenance, IT QCBS, and Multimedia/Manpower). Each tender maintains source provenance (`source = 'GEM_PUBLIC'`) and links directly to associated document metadata in `tender_documents`. The seed mechanism is strictly idempotent using `ON CONFLICT (tender_number)` upserts.

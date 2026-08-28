@@ -67,10 +67,10 @@ def create_tender(
 
 
 @router.get(
-    "/{tender_id}",
+    "/{tender_id:path}",
     response_model=TenderResponse,
     summary="Get a single tender",
-    description="Returns a tender by UUID. Public — no authentication required.",
+    description="Returns a tender by UUID or tender_number. Public — no authentication required.",
     responses={
         404: {"description": "Tender not found"},
     },
