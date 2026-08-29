@@ -29,7 +29,16 @@ Extract the following fields into a strictly valid JSON object matching this sch
   "category": "Item Category / Service Type e.g. Manpower Outsourcing Services",
   "description": "Comprehensive summary description of tender requirements",
   "required_documents": [
-    "List of mandatory documents required from bidders e.g. Company Profile, PAN Card, GST Certificate, CA Turnover Certificate, Work Order, Completion Certificate, Technical Compliance Declaration"
+    "List of mandatory documents required from bidders e.g. Experience Criteria, Bidder Turnover, Certificate (Requested in ATC), Additional Doc 1, Affidavit on Non-Judicial Stamp Paper"
+  ],
+  "document_guidance": [
+    {
+      "requirement": "Requirement Title e.g. Affidavit on Non Judicial Stamp Paper",
+      "expected_document": "Human-friendly document title e.g. Notarized Affidavit (PDF)",
+      "tooltip": "Clear 1-sentence bidder instructions on what to upload",
+      "accepted_aliases": ["Affidavit.pdf", "Notary_Affidavit.pdf", "Stamp_Paper_Declaration.pdf"],
+      "verification_keywords": ["Affidavit", "Notary", "Rs.100", "No Pending Legal Cases"]
+    }
   ],
   "minimum_turnover": 50000000.0,
   "emd_amount": 370000.0,

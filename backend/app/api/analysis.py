@@ -67,8 +67,9 @@ def analyze_bid(payload: AnalyzeBidRequest) -> AnalyzeBidResponse:
     vendor_id = bid_record.get("vendor_id")
     tender_id = bid_record.get("tender_id")
 
-    # Fetch tender minimum turnover requirement if available
+    # Fetch tender requirements if available
     required_turnover = 50000000.0
+    tender_req_list = None
     if tender_id:
         try:
             tender_res = (
@@ -81,6 +82,7 @@ def analyze_bid(payload: AnalyzeBidRequest) -> AnalyzeBidResponse:
                 t_row = tender_res.data[0]
                 reqs = t_row.get("extracted_requirements") or {}
                 required_turnover = float(reqs.get("minimum_turnover") or t_row.get("estimated_value") or 1601070.0)
+                tender_req_list = reqs.get("required_documents")
         except Exception:
             pass
 
@@ -204,7 +206,9 @@ def analyze_bid(payload: AnalyzeBidRequest) -> AnalyzeBidResponse:
 
     # 5. Pass merged data into RuleEngineService
     eval_result = RuleEngineService.evaluate_merged_entities(
-        extracted_payloads, required_turnover=required_turnover
+        extracted_payloads,
+        required_turnover=required_turnover,
+        tender_requirements=tender_req_list,
     )
 
     # Log 6: Rule Engine completed

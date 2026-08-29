@@ -3,6 +3,7 @@
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchTenderById } from "@/lib/mock-api";
+import { getDynamicTenderRequirements } from "@/lib/tender-requirements";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,16 +44,8 @@ export default function TenderDetailPage({ params }: { params: Promise<{ id: str
     return <div className="p-6">Tender not found.</div>;
   }
 
-  const req = tender.extractedRequirements || {};
-  const requiredDocs = req.required_documents || [
-    "Company Profile / Registration",
-    "PAN Card Certificate",
-    "GST Certificate",
-    "CA Turnover Certificate",
-    "Work Order",
-    "Completion Certificate",
-    "Technical Compliance Declaration"
-  ];
+  const dynamicReqs = getDynamicTenderRequirements(tender);
+  const req = tender.extractedRequirements || tender.extracted_requirements || {};
   const minTurnover = req.minimum_turnover || tender.estimatedValue * 2.5 || 50000000;
   const emdVal = req.emd_amount || tender.emdAmount || 370000;
   const deadlineStr = req.submission_deadline
@@ -160,23 +153,29 @@ export default function TenderDetailPage({ params }: { params: Promise<{ id: str
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <FileCheck className="h-4 w-4 text-emerald-600" />
-            Required Documents Checklist ({requiredDocs.length})
+            Required Documents Checklist ({dynamicReqs.length})
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Bidders must upload valid copies of the following documents during application.
+            Bidders must upload valid copies of the following documents extracted directly from the published tender terms.
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {requiredDocs.map((docName: string, idx: number) => (
-              <div key={idx} className="flex items-start gap-2.5 rounded-md border p-3 bg-card">
+            {dynamicReqs.map((reqItem) => (
+              <div key={reqItem.id} className="flex items-start gap-2.5 rounded-md border p-3.5 bg-card hover:border-[#1e3a5f]/40 transition-colors space-y-1">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-500" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium">{docName}</p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <Badge variant="outline" className="text-[9px] bg-red-50 text-red-700 border-red-200">MANDATORY</Badge>
-                    <span className="text-[10px] text-muted-foreground">PDF / Image</span>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-900">{reqItem.title}</p>
+                    <Badge variant="outline" className={`text-[9px] ${reqItem.mandatory ? 'bg-red-50 text-red-700 border-red-200 font-bold' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                      {reqItem.mandatory ? 'MANDATORY' : 'OPTIONAL'}
+                    </Badge>
                   </div>
+                  <div className="text-[11px] text-blue-900 bg-blue-50/70 border border-blue-100 rounded px-2 py-1">
+                    <span className="text-slate-500 font-medium">Expected Document: </span>
+                    <strong className="text-[#1e3a5f] font-semibold">{reqItem.expectedDocument}</strong>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug">{reqItem.tooltip || reqItem.description}</p>
                 </div>
               </div>
             ))}
