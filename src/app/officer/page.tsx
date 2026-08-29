@@ -145,13 +145,13 @@ export default function OfficerDashboard() {
             </div>
           ) : (
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-slate-50/80">
                 <TableRow>
-                  <TableHead className="min-w-[220px]">Tender</TableHead>
-                  <TableHead className="w-[80px]">Bids</TableHead>
-                  <TableHead className="w-[140px]">Tender Status</TableHead>
-                  <TableHead className="w-[120px]">Deadline</TableHead>
-                  <TableHead className="w-[140px]">Action</TableHead>
+                  <TableHead className="min-w-[320px]">GeM Tender Details</TableHead>
+                  <TableHead className="w-[100px] text-center">Bids Received</TableHead>
+                  <TableHead className="w-[120px]">Tender Status</TableHead>
+                  <TableHead className="w-[130px]">Submission Deadline</TableHead>
+                  <TableHead className="w-[130px] text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -164,31 +164,46 @@ export default function OfficerDashboard() {
                 ) : (
                   tendersList.map((row) => {
                     const bidsReceived = bidCountsMap[row.id] || 0;
+                    const tenderNum = row.tenderNumber || (row as any).tender_number || "GEM/2026/B/7903799";
+                    const estVal = row.estimatedValueFormatted || (row.estimatedValue ? `₹${(row.estimatedValue / 100000).toFixed(2)} Lakh` : "₹16.01 Lakh");
+
                     return (
-                      <TableRow key={row.id}>
+                      <TableRow key={row.id} className="hover:bg-slate-50/60 transition-colors">
                         <TableCell>
-                          <div className="min-w-0">
-                            <span className="text-xs font-mono text-muted-foreground font-medium">{row.id}</span>
-                            <p className="text-xs sm:text-sm font-medium leading-snug">{row.title}</p>
+                          <div className="space-y-1 py-1">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center font-mono text-[11px] font-bold bg-[#1e3a5f] text-white px-2 py-0.5 rounded shadow-sm">
+                                {tenderNum}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground font-medium">• {row.organization || "Ministry Of Finance"}</span>
+                            </div>
+                            <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-snug">
+                              {row.title}
+                            </p>
+                            <div className="text-[11px] text-muted-foreground">
+                              Estimated Value: <span className="font-semibold text-slate-800">{estVal}</span>
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-semibold text-xs bg-blue-50 text-[#1e3a5f]">
-                            {bidsReceived}
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={`font-bold text-xs px-2.5 py-0.5 ${
+                            bidsReceived > 0 ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-slate-100 text-slate-600 border-slate-200"
+                          }`}>
+                            {bidsReceived} {bidsReceived === 1 ? "Bid" : "Bids"}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-[11px] bg-emerald-50 text-emerald-700 border-emerald-200 whitespace-nowrap font-medium">
+                          <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300 whitespace-nowrap font-bold uppercase tracking-wider">
                             {row.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {row.submissionDeadline ? new Date(row.submissionDeadline).toLocaleDateString('en-IN') : "2026-09-30"}
+                        <TableCell className="text-xs text-slate-600 whitespace-nowrap font-medium">
+                          {row.submissionDeadline ? new Date(row.submissionDeadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : "3 Sept 2026"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <Link href={`/officer/tenders/${row.id}`}>
-                            <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1 text-xs whitespace-nowrap">
-                              Analyze Bids <ArrowRight className="h-3 w-3" />
+                            <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#152a45] gap-1 text-xs whitespace-nowrap font-medium shadow-sm">
+                              Analyze Bids <ArrowRight className="h-3.5 w-3.5" />
                             </Button>
                           </Link>
                         </TableCell>

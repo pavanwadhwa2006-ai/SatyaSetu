@@ -17,6 +17,7 @@ export interface TenderRequirement {
 
 export interface Tender {
   id: string;
+  tenderNumber?: string;
   title: string;
   organization: string;
   department: string;

@@ -75,12 +75,12 @@ def analyze_bid(payload: AnalyzeBidRequest) -> AnalyzeBidResponse:
                 supabase.table("tenders")
                 .select("extracted_requirements, estimated_value")
                 .eq("id", tender_id)
-                .maybeSingle()
                 .execute()
             )
             if tender_res.data:
-                reqs = tender_res.data.get("extracted_requirements") or {}
-                required_turnover = float(reqs.get("minimum_turnover") or (float(tender_res.data.get("estimated_value") or 18500000) * 2.5))
+                t_row = tender_res.data[0]
+                reqs = t_row.get("extracted_requirements") or {}
+                required_turnover = float(reqs.get("minimum_turnover") or t_row.get("estimated_value") or 1601070.0)
         except Exception:
             pass
 
@@ -97,10 +97,18 @@ def analyze_bid(payload: AnalyzeBidRequest) -> AnalyzeBidResponse:
     doc_res = (
         supabase.table("vendor_documents")
         .select("*")
-        .or_(f"bid_submission_id.eq.{bid_id_str},vendor_id.eq.{vendor_id}")
+        .eq("bid_submission_id", bid_id_str)
         .execute()
     )
     documents = doc_res.data or []
+    if not documents and vendor_id:
+        doc_res = (
+            supabase.table("vendor_documents")
+            .select("*")
+            .eq("vendor_id", vendor_id)
+            .execute()
+        )
+        documents = doc_res.data or []
 
     # Log 3: Documents found
     logger.info(
@@ -162,9 +170,9 @@ def analyze_bid(payload: AnalyzeBidRequest) -> AnalyzeBidResponse:
         vendor_name = "Applicant Vendor"
         if vendor_id:
             try:
-                v_res = supabase.table("vendors").select("display_name, pan_number, gstin").eq("id", vendor_id).maybeSingle().execute()
+                v_res = supabase.table("vendors").select("display_name, pan_number, gstin").eq("id", vendor_id).execute()
                 if v_res.data:
-                    vendor_name = v_res.data.get("display_name") or vendor_name
+                    vendor_name = v_res.data[0].get("display_name") or vendor_name
             except Exception:
                 pass
 
@@ -216,18 +224,19 @@ def analyze_bid(payload: AnalyzeBidRequest) -> AnalyzeBidResponse:
 
     # 6. Save AI verification results back to public.bid_submissions table
     try:
-        score_val = float(max(0, 100 - eval_result["risk_score"]))
-        ai_status_val = "VERIFIED" if eval_result["recommendation"] == "AUTO_APPROVE" else "NEEDS_REVIEW"
+        score_val = float(eval_result.get("compliance_score", max(0, 100 - eval_result["risk_score"])))
+        ai_status_val = eval_result.get("ai_verification_status", "NEEDS_REVIEW")
+        rec_val = eval_result.get("officer_recommendation", "CLARIFICATION_REQUIRED")
         
         supabase.table("bid_submissions").update({
             "ai_verification_status": ai_status_val,
             "ai_score": score_val,
-            "ai_summary": f"Recommendation: {eval_result['recommendation']} | Risk Score: {eval_result['risk_score']}/100",
+            "ai_summary": f"Recommendation: {rec_val} | Compliance Score: {score_val}% | Risk Level: {eval_result.get('risk_level', 'LOW')}",
             "verification_results": eval_result,
             "verified_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", bid_id_str).execute()
         
-        logger.info("Saved AI verification results to bid_submissions | bid_id: '%s'", bid_id_str)
+        logger.info("Saved AI verification results to bid_submissions | bid_id: '%s' | score: %.1f", bid_id_str, score_val)
     except Exception as db_err:
         logger.warning("Could not persist AI verification results to bid_submissions: %s", str(db_err))
 

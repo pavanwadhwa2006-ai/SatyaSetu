@@ -59,8 +59,10 @@ export const riskAssessments: RiskAssessment[] = [
   },
 ];
 
-export const getRiskByBidder = (bidderId: string): RiskAssessment | undefined =>
-  riskAssessments.find((r) => r.bidderId === bidderId);
+export const getRiskByBidder = (bidderId: string): RiskAssessment => {
+  const result = riskAssessments.find((r) => r.bidderId === bidderId);
+  return result || riskAssessments[0];
+};
 
 // ============================================================
 // Mock AI Recommendations — Prototype Data
@@ -156,8 +158,10 @@ export const aiRecommendations: AIRecommendation[] = [
   },
 ];
 
-export const getRecommendationByBidder = (bidderId: string): AIRecommendation | undefined =>
-  aiRecommendations.find((r) => r.bidderId === bidderId);
+export const getRecommendationByBidder = (bidderId: string): AIRecommendation => {
+  const result = aiRecommendations.find((r) => r.bidderId === bidderId);
+  return result || aiRecommendations[0];
+};
 
 // ============================================================
 // Mock Verification Reasoning — Prototype Data

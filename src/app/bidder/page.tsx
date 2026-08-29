@@ -185,7 +185,7 @@ export default function BidderDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1.5">
                         <span className="text-xs font-mono text-muted-foreground font-medium">
-                          {tender.id}
+                          {(tender as any).tenderNumber || tender.id}
                         </span>
                         <StatusBadge status={tender.status} size="sm" showIcon={false} />
                       </div>

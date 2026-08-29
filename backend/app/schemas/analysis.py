@@ -11,6 +11,26 @@ class AnalyzeBidRequest(BaseModel):
     bid_submission_id: UUID = Field(..., description="UUID of the bid submission to analyze")
 
 
+class FormatCheckResult(BaseModel):
+    valid: bool
+    value: Optional[str] = None
+    message: str
+
+
+class TurnoverCheckResult(BaseModel):
+    passed: bool
+    extracted_turnover: Optional[float] = None
+    required_turnover: float
+    message: str
+
+
+class NameMismatchResult(BaseModel):
+    detected: bool
+    unique_names: List[str] = Field(default_factory=list)
+    message: str
+
+
+
 
 
 class PanVerification(BaseModel):

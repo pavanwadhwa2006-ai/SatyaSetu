@@ -72,14 +72,30 @@ export default function BidSuccessPage({ params }: { params: Promise<{ id: strin
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Evaluation Status</span>
-              <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
-                <CheckCircle2 className="h-3.5 w-3.5" /> {submission?.status || "UNDER_EVALUATION"}
+              <span className={`inline-flex items-center gap-1 font-bold ${
+                submission?.status === "DISQUALIFIED" || (submission?.ai_score && submission.ai_score < 75)
+                  ? "text-red-600"
+                  : submission?.status === "CLARIFICATION_REQUESTED"
+                  ? "text-amber-600"
+                  : "text-emerald-700"
+              }`}>
+                {submission?.status === "DISQUALIFIED" || (submission?.ai_score && submission.ai_score < 75) ? (
+                  <span className="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded text-[11px] uppercase font-bold">
+                    DISQUALIFIED
+                  </span>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {submission?.status || "UNDER_EVALUATION"}
+                  </>
+                )}
               </span>
             </div>
-            {submission?.ai_score && (
+            {submission?.ai_score !== undefined && submission?.ai_score !== null && (
               <div className="flex justify-between items-center border-t pt-2 mt-2">
                 <span className="text-muted-foreground font-medium">AI Verification Score</span>
-                <span className="font-bold text-emerald-700">{submission.ai_score}%</span>
+                <span className={`font-bold ${
+                  submission.ai_score < 75 ? "text-red-600" : "text-emerald-700"
+                }`}>{submission.ai_score}%</span>
               </div>
             )}
           </div>

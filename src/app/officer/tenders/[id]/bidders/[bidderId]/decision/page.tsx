@@ -1,8 +1,9 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { getBidderById } from "@/data/bidders";
+import { fetchBidderById, recordOfficerDecision } from "@/lib/mock-api";
 import { getComplianceByBidder } from "@/data/compliance";
 import { getRiskByBidder, getRecommendationByBidder } from "@/data/risk-and-recommendations";
 import { useEvaluation } from "@/contexts/evaluation-context";
@@ -11,18 +12,36 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/compliance/status-badge";
-import { DecisionType } from "@/types";
+import { DecisionType, Bidder } from "@/types";
 import {
-  Gavel, CheckCircle2, XCircle, MessageSquare, AlertTriangle, ArrowRight,
+  Gavel, CheckCircle2, XCircle, MessageSquare, AlertTriangle, ArrowRight, Loader2,
 } from "lucide-react";
 import { PreviousButton } from "@/components/shared/previous-button";
 
 export default function FinalDecisionPage({ params }: { params: Promise<{ id: string; bidderId: string }> }) {
   const { id, bidderId } = use(params);
-  const bidder = getBidderById(bidderId);
-  const compliance = getComplianceByBidder(bidderId);
-  const risk = getRiskByBidder(bidderId);
-  const rec = getRecommendationByBidder(bidderId);
+  const [bidder, setBidder] = useState<Bidder | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchBidderById(bidderId).then((b) => {
+      if (isMounted) {
+        setBidder(b || getBidderById(bidderId) || null);
+        setLoading(false);
+      }
+    });
+    return () => { isMounted = false; };
+  }, [bidderId]);
+
+  const rawCompliance = getComplianceByBidder(bidderId);
+  const rawRisk = getRiskByBidder(bidderId);
+  const rawRec = getRecommendationByBidder(bidderId);
+
+  const compliance = rawCompliance;
+  const risk = rawRisk;
+  const rec = rawRec;
+
   const { makeDecision, getDecision } = useEvaluation();
   const existingDecision = getDecision(bidderId);
 
@@ -32,7 +51,16 @@ export default function FinalDecisionPage({ params }: { params: Promise<{ id: st
   const [remarks, setRemarks] = useState(existingDecision?.remarks ?? "");
   const [confirmed, setConfirmed] = useState(!!existingDecision);
 
-  if (!bidder || !compliance || !risk || !rec) return <div className="p-6">Not found.</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-muted-foreground gap-2">
+        <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f]" />
+        <span className="text-sm">Loading decision portal...</span>
+      </div>
+    );
+  }
+
+  if (!bidder) return <div className="p-6">Bidder profile not found.</div>;
 
   const handleConfirm = async () => {
     if (!selectedDecision) return;

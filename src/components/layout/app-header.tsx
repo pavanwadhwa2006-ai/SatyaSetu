@@ -199,25 +199,39 @@ export function AppHeader() {
           {/* Right: Role, User info & Logout */}
           {user && (
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Role Badge */}
+              {/* Role Badge & Portal Switcher */}
               {user.role === "officer" ? (
-                <Badge
-                  variant="secondary"
-                  className="bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20 gap-1.5 font-medium text-xs px-2 py-0.5 sm:px-2.5 sm:py-1"
-                >
-                  <LayoutDashboard className="h-3 w-3 shrink-0" />
-                  <span className="hidden sm:inline">Procurement Officer</span>
-                  <span className="sm:hidden">Officer</span>
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="secondary"
+                    className="bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20 gap-1.5 font-medium text-xs px-2 py-0.5 sm:px-2.5 sm:py-1"
+                  >
+                    <LayoutDashboard className="h-3 w-3 shrink-0" />
+                    <span className="hidden sm:inline">Procurement Officer</span>
+                    <span className="sm:hidden">Officer</span>
+                  </Badge>
+                  <Link href="/bidder">
+                    <Button variant="outline" size="sm" className="h-7 px-2 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border-emerald-300 hover:bg-emerald-100 cursor-pointer">
+                      Bidder Portal →
+                    </Button>
+                  </Link>
+                </div>
               ) : (
-                <Badge
-                  variant="secondary"
-                  className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 font-medium text-xs px-2 py-0.5 sm:px-2.5 sm:py-1"
-                >
-                  <Building2 className="h-3 w-3 shrink-0" />
-                  <span className="hidden sm:inline">Bidder Portal</span>
-                  <span className="sm:hidden">Bidder</span>
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="secondary"
+                    className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 font-medium text-xs px-2 py-0.5 sm:px-2.5 sm:py-1"
+                  >
+                    <Building2 className="h-3 w-3 shrink-0" />
+                    <span className="hidden sm:inline">Bidder Portal</span>
+                    <span className="sm:hidden">Bidder</span>
+                  </Badge>
+                  <Link href="/officer">
+                    <Button variant="outline" size="sm" className="h-7 px-2 text-[11px] font-semibold text-[#1e3a5f] bg-blue-50 border-blue-200 hover:bg-blue-100 cursor-pointer">
+                      Officer Portal →
+                    </Button>
+                  </Link>
+                </div>
               )}
 
               <div className="hidden sm:block h-5 w-px bg-border" />

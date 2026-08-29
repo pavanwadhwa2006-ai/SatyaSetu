@@ -36,6 +36,26 @@ export default function PublishTenderPage() {
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        setSelectedFile(file);
+        setPresetName("");
+        setError(null);
+      } else {
+        setError("Please drop a valid PDF document file.");
+      }
+    }
+  };
+
   const handleSelectPreset = async (preset: typeof DEMO_PRESETS[0]) => {
     setPresetName(preset.name);
     setError(null);
@@ -120,7 +140,11 @@ export default function PublishTenderPage() {
       )}
 
       {/* Upload Card */}
-      <Card className="p-4 sm:p-6 border-2 border-dashed border-slate-300 hover:border-[#1e3a5f]/50 transition-colors bg-white">
+      <Card
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        className="p-4 sm:p-6 border-2 border-dashed border-slate-300 hover:border-[#1e3a5f]/50 transition-colors bg-white cursor-pointer"
+      >
         <div className="space-y-4">
           <div className="flex flex-col items-center justify-center text-center p-4">
             <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
@@ -140,10 +164,11 @@ export default function PublishTenderPage() {
               className="hidden"
               onChange={handleFileChange}
             />
-            <label htmlFor="tender-pdf-input" className="mt-4">
-              <Button variant="outline" size="sm" type="button" className="cursor-pointer gap-2 text-xs">
-                <FileText className="h-4 w-4" /> Browse PDF File
-              </Button>
+            <label
+              htmlFor="tender-pdf-input"
+              className="mt-4 inline-flex items-center justify-center rounded-md bg-white border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#1e3a5f] hover:border-[#1e3a5f] cursor-pointer transition-all shadow-sm gap-2"
+            >
+              <FileText className="h-4 w-4 text-[#1e3a5f]" /> Browse PDF File
             </label>
 
             {selectedFile && (

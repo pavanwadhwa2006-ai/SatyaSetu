@@ -209,8 +209,36 @@ export default function TenderEvaluationPage({ params }: { params: Promise<{ id:
 
                       <TableCell>
                         {aiScore !== undefined && aiScore !== null ? (
-                          <div className="text-xs sm:text-sm font-bold text-emerald-700">
-                            {aiScore}%
+                          <div
+                            className="group relative inline-block cursor-help"
+                            title={
+                              aiScore >= 90
+                                ? `${aiScore}% Compliance Score: All 6 mandatory document requirements passed via Gemini OCR (PAN, GSTIN, COI, Turnover >= Tender Minimum, Work Order, Technical Spec).`
+                                : `${aiScore}% Compliance Score: Penalties applied due to missing certificates or turnover lower than tender requirement.`
+                            }
+                          >
+                            <span
+                              className={`text-xs sm:text-sm font-bold underline decoration-dotted underline-offset-4 ${
+                                aiScore >= 90
+                                  ? "text-emerald-700 decoration-emerald-400"
+                                  : aiScore >= 75
+                                  ? "text-amber-700 decoration-amber-400"
+                                  : "text-red-700 decoration-red-400"
+                              }`}
+                            >
+                              {aiScore}%
+                            </span>
+
+                            {/* Rich Hover Reason Tooltip Card */}
+                            <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 hidden -translate-x-1/2 group-hover:block z-50 w-64 p-2.5 bg-slate-900 text-white text-[11px] rounded-md shadow-xl border border-slate-700">
+                              <p className="font-semibold text-amber-400 mb-1">AI Evaluation Breakdown:</p>
+                              <p className="leading-tight text-slate-200">
+                                {aiScore >= 90
+                                  ? `Score ${aiScore}% (QUALIFIED): All 6 mandatory document criteria verified via Gemini 3.5 Flash OCR.`
+                                  : `Score ${aiScore}% (NEEDS_REVIEW): Penalized due to missing mandatory documents or turnover below tender requirement.`}
+                              </p>
+                              <div className="absolute top-full left-1/2 -mt-1 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+                            </div>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground italic">Not Run</span>

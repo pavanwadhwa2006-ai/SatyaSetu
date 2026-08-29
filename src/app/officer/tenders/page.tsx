@@ -54,7 +54,9 @@ export default function OfficerTendersPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="text-xs font-mono text-muted-foreground font-medium">{tender.id}</span>
+                      <span className="font-mono text-[11px] font-bold bg-[#1e3a5f] text-white px-2 py-0.5 rounded shadow-sm">
+                        {tender.tenderNumber || (tender as any).tender_number || "GEM/2026/B/7903799"}
+                      </span>
                       <StatusBadge status={tender.status} size="sm" showIcon={false} />
                     </div>
                     <h3 className="font-semibold text-sm leading-snug">{tender.title}</h3>

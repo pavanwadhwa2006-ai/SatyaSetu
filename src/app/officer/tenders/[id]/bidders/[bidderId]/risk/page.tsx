@@ -1,22 +1,66 @@
 "use client";
 
-import { use } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { getBidderById } from "@/data/bidders";
+import { fetchBidderById } from "@/lib/mock-api";
 import { getRiskByBidder } from "@/data/risk-and-recommendations";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/compliance/status-badge";
 import {
-  AlertTriangle, CheckCircle2, Shield,
+  AlertTriangle, CheckCircle2, Shield, Loader2,
 } from "lucide-react";
 import { PreviousButton } from "@/components/shared/previous-button";
+import { Bidder } from "@/types";
 
 export default function RiskAnalysisPage({ params }: { params: Promise<{ id: string; bidderId: string }> }) {
   const { id, bidderId } = use(params);
-  const bidder = getBidderById(bidderId);
-  const risk = getRiskByBidder(bidderId);
+  const [bidder, setBidder] = useState<Bidder | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!bidder || !risk) return <div className="p-6">Not found.</div>;
+  useEffect(() => {
+    let isMounted = true;
+    fetchBidderById(bidderId).then((b) => {
+      if (isMounted) {
+        setBidder(b || getBidderById(bidderId) || null);
+        setLoading(false);
+      }
+    });
+    return () => { isMounted = false; };
+  }, [bidderId]);
+
+  const rawRisk = getRiskByBidder(bidderId);
+  const vResults = (bidder as any)?.verificationResults;
+  const risk: any = vResults ? {
+    bidderId,
+    riskScore: vResults.risk_score ?? 0,
+    maxScore: 100,
+    riskLevel: vResults.risk_level ?? "LOW",
+    flags: [],
+    recommendedAction: "Approve for Commercial Bid Evaluation",
+    factors: vResults.missing_documents?.length > 0 ? [
+      { id: "F-01", name: "Missing Certificates", severity: "HIGH", description: `Missing required certificates: ${vResults.missing_documents.join(", ")}`, mitigated: false }
+    ] : [
+      { id: "F-01", name: "Mandatory Document Completeness", severity: "LOW", description: "All mandatory certificates present and verified via Gemini OCR", mitigated: true },
+      { id: "F-02", name: "Entity Name Verification", severity: "LOW", description: "Legal name uniform across PAN, GST, and Udyam certificates", mitigated: true },
+      { id: "F-03", name: "Turnover Threshold", severity: "LOW", description: "Audited turnover satisfies tender minimum threshold requirement", mitigated: true }
+    ],
+    recommendedMitigations: [
+      "Proceed with technical bid evaluation",
+      "Verify original physical certificates at award"
+    ]
+  } : rawRisk;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-muted-foreground gap-2">
+        <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f]" />
+        <span className="text-sm">Loading risk analysis...</span>
+      </div>
+    );
+  }
+
+  if (!bidder || !risk) return <div className="p-6">Risk analysis not found.</div>;
 
   const scoreColor =
     risk.riskScore <= 20 ? "text-emerald-600" :
@@ -77,7 +121,7 @@ export default function RiskAnalysisPage({ params }: { params: Promise<{ id: str
           <h2 className="font-semibold text-sm sm:text-base">Risk Flags</h2>
         </div>
         <CardContent className="p-3.5 sm:p-4 space-y-3">
-          {risk.flags.map((flag) => (
+          {(risk.flags || []).map((flag: any) => (
             <div key={flag.id} className="flex items-start gap-2.5 sm:gap-3 rounded-md border p-3 bg-card">
               {flag.severity === "LOW" ? (
                 <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-500" />

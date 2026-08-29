@@ -75,7 +75,16 @@ export default function DocumentVerificationPage({ params }: { params: Promise<{
     }
   };
 
-  if (!bidder) return <div className="p-6">Bidder not found.</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-muted-foreground gap-2">
+        <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f]" />
+        <span className="text-sm">Loading document verification...</span>
+      </div>
+    );
+  }
+
+  if (!bidder) return <div className="p-6">Bidder profile not found.</div>;
 
   const getVerification = (doc: BidDocument): VerificationRecord | undefined => {
     if (doc.type === "GST_CERTIFICATE") return verifications.find(v => v.verificationType === "GST");

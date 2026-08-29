@@ -50,7 +50,7 @@ export default function TendersPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="text-xs font-mono text-muted-foreground font-medium">{tender.id}</span>
+                      <span className="text-xs font-mono text-muted-foreground font-medium">{(tender as any).tenderNumber || tender.id}</span>
                       <StatusBadge status={tender.status} size="sm" showIcon={false} />
                     </div>
                     <h3 className="font-semibold text-sm leading-snug">{tender.title}</h3>

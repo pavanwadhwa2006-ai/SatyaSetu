@@ -35,8 +35,19 @@ export default function BidderCompliancePage({ params }: { params: Promise<{ id:
   useEffect(() => {
     let isMounted = true;
     fetchBidderById(bidderId).then((b) => {
-      if (isMounted) {
-        setBidder(b || getBidderById(bidderId) || null);
+      if (isMounted && b) {
+        setBidder(b);
+        if ((b as any).verificationResults) {
+          setAnalysisResult((b as any).verificationResults);
+        }
+        setLoading(false);
+        // Automatically fetch/refresh realtime backend AI analysis for EVERY bidder
+        triggerAnalyzeBid(bidderId).then((liveRes) => {
+          if (isMounted && liveRes && liveRes.risk_score !== undefined) {
+            setAnalysisResult(liveRes);
+          }
+        }).catch((err) => console.warn("Live AI analysis refresh notice:", err));
+      } else if (isMounted) {
         setLoading(false);
       }
     });
@@ -73,14 +84,20 @@ export default function BidderCompliancePage({ params }: { params: Promise<{ id:
 
   if (!bidder || !compliance) return <div className="p-6">Bidder not found.</div>;
 
+  const effectiveScore = (analysisResult && analysisResult.compliance_score !== undefined)
+    ? Number(analysisResult.compliance_score)
+    : (bidder as any)?.aiScore !== undefined && (bidder as any)?.aiScore !== null
+    ? Number((bidder as any).aiScore)
+    : compliance.complianceScore;
+
   const scoreColor =
-    compliance.complianceScore >= 90 ? "text-emerald-600" :
-    compliance.complianceScore >= 80 ? "text-amber-600" :
+    effectiveScore >= 90 ? "text-emerald-600" :
+    effectiveScore >= 70 ? "text-amber-600" :
     "text-red-600";
 
   const scoreBg =
-    compliance.complianceScore >= 90 ? "bg-emerald-50 border-emerald-200" :
-    compliance.complianceScore >= 80 ? "bg-amber-50 border-amber-200" :
+    effectiveScore >= 90 ? "bg-emerald-50 border-emerald-200" :
+    effectiveScore >= 70 ? "bg-amber-50 border-amber-200" :
     "bg-red-50 border-red-200";
 
   return (
@@ -211,42 +228,55 @@ export default function BidderCompliancePage({ params }: { params: Promise<{ id:
       )}
 
       {/* Score + Risk + Status Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card className={`border ${scoreBg}`}>
-          <CardContent className="p-3.5 sm:p-4 text-center">
-            <p className="text-xs text-muted-foreground">Compliance Score</p>
-            <p className={`text-2xl sm:text-3xl font-bold ${scoreColor}`}>{compliance.complianceScore}</p>
-            <p className="text-[11px] sm:text-xs text-muted-foreground">/ 100</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3.5 sm:p-4 text-center">
-            <p className="text-xs text-muted-foreground">Risk Level</p>
-            <div className="mt-1 flex justify-center">
-              <StatusBadge status={risk?.riskLevel ?? "LOW"} size="md" showIcon={false} />
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">{risk?.riskScore ?? 0} / 100</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3.5 sm:p-4 text-center">
-            <p className="text-xs text-muted-foreground">Overall Status</p>
-            <div className="mt-1 flex justify-center">
-              <StatusBadge status={compliance.overallStatus} size="md" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3.5 sm:p-4 text-center">
-            <p className="text-xs text-muted-foreground">Requirements</p>
-            <div className="flex items-center justify-center gap-2 sm:gap-3 mt-2">
-              <span className="text-xs"><span className="font-bold text-emerald-700">{compliance.passedRequirements}</span> Pass</span>
-              <span className="text-xs"><span className="font-bold text-red-700">{compliance.failedRequirements}</span> Fail</span>
-              <span className="text-xs"><span className="font-bold text-amber-700">{compliance.reviewRequirements}</span> Rev</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {(() => {
+        const vResults = analysisResult || (bidder as any)?.verificationResults;
+        const currentRiskLevel = vResults?.risk_level || risk?.riskLevel || "LOW";
+        const currentRiskScore = vResults?.risk_score ?? risk?.riskScore ?? 0;
+        const currentStatus = (bidder as any)?.submissionStatus || vResults?.officer_recommendation || compliance.overallStatus;
+        const itemsList: any[] = vResults?.items || compliance.items;
+        const passCnt = itemsList.filter((it: any) => it.status === "PASS").length;
+        const failCnt = itemsList.filter((it: any) => it.status === "FAIL").length;
+        const revCnt = itemsList.filter((it: any) => it.status === "REVIEW").length;
+
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card className={`border ${scoreBg}`}>
+              <CardContent className="p-3.5 sm:p-4 text-center">
+                <p className="text-xs text-muted-foreground">Compliance Score</p>
+                <p className={`text-2xl sm:text-3xl font-bold ${scoreColor}`}>{effectiveScore}</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground">/ 100</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3.5 sm:p-4 text-center">
+                <p className="text-xs text-muted-foreground">Risk Level</p>
+                <div className="mt-1 flex justify-center">
+                  <StatusBadge status={currentRiskLevel} size="md" showIcon={false} />
+                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">{currentRiskScore} / 100</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3.5 sm:p-4 text-center">
+                <p className="text-xs text-muted-foreground">Overall Status</p>
+                <div className="mt-1 flex justify-center">
+                  <StatusBadge status={currentStatus} size="md" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3.5 sm:p-4 text-center">
+                <p className="text-xs text-muted-foreground">Requirements</p>
+                <div className="flex items-center justify-center gap-2 sm:gap-3 mt-2">
+                  <span className="text-xs"><span className="font-bold text-emerald-700">{passCnt}</span> Pass</span>
+                  <span className="text-xs"><span className="font-bold text-red-700">{failCnt}</span> Fail</span>
+                  <span className="text-xs"><span className="font-bold text-amber-700">{revCnt}</span> Rev</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
 
       {/* Action Buttons (Scrollable / Wrapping) */}
       <div className="flex flex-wrap items-center gap-2">
@@ -294,7 +324,7 @@ export default function BidderCompliancePage({ params }: { params: Promise<{ id:
               </TableRow>
             </TableHeader>
             <TableBody>
-              {compliance.items.map((item) => (
+              {(analysisResult?.items || (bidder as any)?.verificationResults?.items || compliance.items).map((item: any) => (
                 <TableRow key={item.requirementId}>
                   <TableCell className="font-medium text-xs sm:text-sm">{item.requirementName}</TableCell>
                   <TableCell><StatusBadge status={item.status} size="sm" /></TableCell>

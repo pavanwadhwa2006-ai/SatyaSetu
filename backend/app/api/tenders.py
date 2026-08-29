@@ -111,6 +111,14 @@ async def publish_tender(
 officer_router = APIRouter(prefix="/officer", tags=["officer"])
 
 
+from pydantic import BaseModel
+
+
+class PublishExistingTenderRequest(BaseModel):
+    tender_id: str
+    storage_path: Optional[str] = None
+
+
 @officer_router.post(
     "/publish-tender",
     summary="Officer Publish Tender Endpoint",
@@ -136,6 +144,79 @@ async def officer_publish_tender(
         estimated_value=estimated_value,
         emd_amount=emd_amount,
     )
+
+
+@officer_router.post(
+    "/publish-existing-tender",
+    summary="Publish an existing GeM tender from Supabase Storage using Gemini AI Requirement Extraction",
+)
+async def officer_publish_existing_tender(req: PublishExistingTenderRequest) -> dict:
+    supabase = get_supabase_client()
+    
+    # 1. Fetch tender record
+    t_res = supabase.table("tenders").select("*").eq("id", req.tender_id).execute()
+    if not t_res.data:
+        raise HTTPException(status_code=404, detail=f"Tender '{req.tender_id}' not found")
+    
+    tender_record = t_res.data[0]
+    
+    # 2. Get storage_path from request or tender_documents table
+    storage_path = req.storage_path
+    if not storage_path:
+        doc_res = supabase.table("tender_documents").select("*").eq("tender_id", req.tender_id).execute()
+        if doc_res.data and doc_res.data[0].get("storage_path"):
+            storage_path = doc_res.data[0]["storage_path"]
+        else:
+            clean_num = tender_record.get("tender_number", "").replace("/", "")
+            storage_path = f"{clean_num}.pdf"
+            
+    # 3. Download PDF bytes from Supabase Storage bucket 'tender-documents'
+    try:
+        pdf_bytes = supabase.storage.from_("tender-documents").download(storage_path)
+    except Exception as dl_err:
+        logger.error("Failed downloading '%s' from tender-documents bucket: %s", storage_path, str(dl_err))
+        raise HTTPException(status_code=404, detail=f"PDF file '{storage_path}' not found in tender-documents storage bucket.") from dl_err
+        
+    # 4. Run Gemini AI Requirement Extraction
+    extraction_status_str = "COMPLETED"
+    try:
+        extracted = extract_tender_requirements(pdf_bytes, storage_path)
+    except Exception as ext_err:
+        logger.error("Gemini extraction error for '%s': %s", storage_path, str(ext_err))
+        extraction_status_str = "FAILED"
+        extracted = {}
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    
+    update_payload = {
+        "status": "OPEN",
+        "extracted_requirements": extracted,
+        "extraction_status": extraction_status_str,
+        "extracted_at": now_iso,
+        "published_at": now_iso,
+    }
+    if extracted.get("tender_title"):
+        update_payload["title"] = extracted["tender_title"]
+    if extracted.get("department"):
+        update_payload["department"] = extracted["department"]
+    if extracted.get("category"):
+        update_payload["category"] = extracted["category"]
+    if extracted.get("estimated_value"):
+        update_payload["estimated_value"] = int(extracted["estimated_value"])
+    if extracted.get("emd_amount"):
+        update_payload["emd_amount"] = int(extracted["emd_amount"])
+        
+    supabase.table("tenders").update(update_payload).eq("id", req.tender_id).execute()
+    
+    return {
+        "tender_id": req.tender_id,
+        "tender_number": tender_record.get("tender_number"),
+        "title": update_payload.get("title", tender_record.get("title")),
+        "status": "OPEN",
+        "extraction_status": extraction_status_str,
+        "extracted_requirements": extracted,
+        "storage_path": storage_path,
+    }
 
 
 async def _process_tender_publish(

@@ -292,10 +292,12 @@ export default function BidderApplyPage({ params }: { params: Promise<{ id: stri
                         }
                       }}
                     />
-                    <label htmlFor={`file-input-${docType.id}`} className="mt-2">
-                      <Button variant="outline" size="sm" type="button" className="cursor-pointer text-xs h-7 gap-1">
-                        Select PDF
-                      </Button>
+                    <label
+                      htmlFor={`file-input-${docType.id}`}
+                      className="mt-2.5 inline-flex items-center justify-center rounded-md bg-white border border-slate-300 px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#1e3a5f] hover:border-[#1e3a5f] cursor-pointer transition-all shadow-sm gap-1.5"
+                    >
+                      <FileText className="h-3.5 w-3.5 text-[#1e3a5f]" />
+                      Select PDF
                     </label>
                   </div>
                 )}
