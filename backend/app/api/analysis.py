@@ -283,6 +283,27 @@ def record_officer_decision(payload: OfficerDecisionRequest) -> dict:
             "updated_at": now_iso,
             "success": True,
         }
+    except Exception as e:
+        logger.error("Failed to record officer decision: %s", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database update failed: {e}",
+        )
+
+
+@router.get(
+    "/analysis/bidder-bids",
+    summary="Get Bidder Submissions with Tenders & Statuses",
+    description="Returns all persistent bid submissions for a vendor with joined tender data.",
+)
+def get_bidder_bids(vendor_id: Optional[str] = None) -> list:
+    supabase = get_supabase_client()
+    try:
+        query = supabase.table("bid_submissions").select("*, tenders(*), vendors(*)").order("submitted_at", desc=True)
+        if vendor_id:
+            query = query.eq("vendor_id", vendor_id)
+        res = query.execute()
+        return res.data or []
     except Exception as err:
-        logger.error("Error recording officer decision for bid '%s': %s", bid_id, str(err))
-        raise HTTPException(status_code=500, detail=f"Database update error: {err}")
+        logger.warning("Error fetching bidder bids: %s", str(err))
+        return []

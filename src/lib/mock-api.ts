@@ -453,6 +453,25 @@ export async function submitBidApplication(params: {
 }
 
 export async function fetchBidSubmissionsForBidder(vendorId?: string): Promise<any[]> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+  // 1. Try FastAPI backend endpoint (service client bypasses RLS)
+  try {
+    const url = vendorId
+      ? `${apiUrl}/api/analysis/bidder-bids?vendor_id=${vendorId}`
+      : `${apiUrl}/api/analysis/bidder-bids`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    }
+  } catch (backendErr) {
+    console.warn('Backend /api/analysis/bidder-bids notice:', backendErr);
+  }
+
+  // 2. Supabase client query fallback
   try {
     let targetVendorId = vendorId;
     if (!targetVendorId) {
@@ -477,7 +496,6 @@ export async function fetchBidSubmissionsForBidder(vendorId?: string): Promise<a
       }
     }
 
-    // Fallback: fetch any bid submissions present in Supabase DB
     const { data: allBids } = await supabase
       .from('bid_submissions')
       .select('*, tenders(*)')
