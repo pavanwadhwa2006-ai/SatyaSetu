@@ -18,20 +18,36 @@ logger = logging.getLogger(__name__)
 
 # System prompt requesting ONLY structured JSON entity extraction
 OCR_EXTRACTION_PROMPT = """
-You are a high-precision document extraction engine for procurement document verification.
-Your ONLY task is to analyze the provided document PDF and extract key structured information.
-Do NOT evaluate compliance, do NOT pass judgment, and do NOT make procurement decisions.
+You are an expert AI Document Classifier and Data Extraction Engine for public procurement document compliance.
+Your task is to analyze the provided document PDF, classify its actual type, and extract key entity details.
 
-Extract the following fields into a strictly valid JSON object matching this schema:
+CRITICAL DOCUMENT CLASSIFICATION INSTRUCTION:
+Examine the document carefully. Distinguish between official government certificates / statutory compliance documents vs generic marketing brochures / company profiles.
+- If the document is a generic Company Profile, Brochure, Marketing Deck, Product Catalog, or Presentation that lacks an official government registration certificate, classify it as "COMPANY_PROFILE".
+- If the document is Form GST REG-06 or GST Certificate, classify as "GST_CERTIFICATE".
+- If the document is a PAN Card / PAN Certificate, classify as "PAN_CERTIFICATE".
+- If the document is a Certificate of Incorporation or Udyam MSME Registration, classify as "COMPANY_REGISTRATION" or "UDYAM_REGISTRATION".
+- If the document is a CA Certified Annual Turnover Statement with UDIN / signature, classify as "TURNOVER_CERTIFICATE".
+- If the document is a Work Order, Contract Award, or Completion Certificate from a client, classify as "WORK_ORDER" or "COMPLETION_CERTIFICATE".
+- If the document is a Technical Compliance Statement / Affidavit, classify as "TECHNICAL_COMPLIANCE".
+- Otherwise, classify as "UNKNOWN_DOCUMENT".
+
+Extract into a strictly valid JSON object matching this schema:
 {
-  "document_type": "PAN_CERTIFICATE | GST_CERTIFICATE | COMPANY_REGISTRATION | TURNOVER_CERTIFICATE | WORK_ORDER | COMPLETION_CERTIFICATE | TECHNICAL_COMPLIANCE | UNKNOWN",
+  "document_classification": "GST_CERTIFICATE | PAN_CERTIFICATE | CERTIFICATE_OF_INCORPORATION | UDYAM_REGISTRATION | CA_TURNOVER_CERTIFICATE | WORK_ORDER | COMPLETION_CERTIFICATE | TECHNICAL_COMPLIANCE | COMPANY_PROFILE | UNKNOWN_DOCUMENT",
+  "document_type": "PAN_CERTIFICATE | GST_CERTIFICATE | COMPANY_REGISTRATION | TURNOVER_CERTIFICATE | WORK_ORDER | TECHNICAL_COMPLIANCE | COMPANY_PROFILE | UNKNOWN",
+  "detected_title": "Exact title or heading printed on the document, or null",
   "legal_name": "Full legal company name as printed on document, or null",
-  "pan_number": "10-character PAN number if present (e.g. AABCA1234B), or null",
-  "gstin": "15-character GSTIN if present (e.g. 07AABCA1234B1ZP), or null",
-  "address": "Full registered or business address if present, or null",
-  "turnover": "Numeric financial turnover value in INR if present, or null",
-  "work_order_value": "Numeric contract/work order monetary value in INR if present, or null",
-  "completion_status": "COMPLETED | IN_PROGRESS | PENDING | UNKNOWN"
+  "pan_number": "10-character PAN number if present (e.g. ABCDE1234F), or null",
+  "gstin": "15-character GSTIN if present (e.g. 27ABCDE1234F1Z5), or null",
+  "udyam_number": "Udyam registration number if present (e.g. UDYAM-MH-01-0012345), or null",
+  "cin": "Corporate Identification Number (CIN) if present, or null",
+  "turnover": "Numeric annual turnover value in INR if present, or null",
+  "ca_udin": "CA UDIN number if present, or null",
+  "work_order_value": "Numeric contract monetary value in INR if present, or null",
+  "client_name": "Client or government department name for work order if present, or null",
+  "is_company_profile_or_brochure": false,
+  "summary": "1-sentence summary of document contents"
 }
 
 Return ONLY the raw JSON object. Do not include markdown code block formatting or conversational commentary.
@@ -110,13 +126,14 @@ class OCRService:
                 "GEMINI_API_KEY environment variable is not configured."
             )
 
+        text_content = ""
         try:
             client = genai.Client(api_key=api_key)
 
             pdf_part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
 
-            # Request extraction using Gemini 2.5 Flash
-            model_name = "gemini-2.5-flash"
+            # Request extraction using Gemini 3.5 Flash
+            model_name = "gemini-3.5-flash"
             try:
                 response = client.models.generate_content(
                     model=model_name,
@@ -127,9 +144,9 @@ class OCRService:
                     ),
                 )
             except Exception as model_err:
-                logger.warning("Primary model %s failed, retrying with gemini-2.0-flash: %s", model_name, str(model_err))
+                logger.warning("Primary model %s failed, retrying with gemini-3.6-flash: %s", model_name, str(model_err))
                 response = client.models.generate_content(
-                    model="gemini-2.0-flash",
+                    model="gemini-3.6-flash",
                     contents=[pdf_part, OCR_EXTRACTION_PROMPT],
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -145,7 +162,7 @@ class OCRService:
             extracted_json = json.loads(text_content)
             return extracted_json
         except json.JSONDecodeError as json_err:
-            clean_output = _sanitize_log_message(text_content if 'text_content' in locals() else "")
+            clean_output = _sanitize_log_message(text_content)
             logger.error("Failed to parse valid JSON output from Gemini: %s", clean_output)
             raise ValueError(f"Gemini OCR response was not valid JSON: {json_err}") from json_err
         except Exception as api_err:
